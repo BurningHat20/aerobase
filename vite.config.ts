@@ -10,13 +10,12 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
-  // Prevent vite from obscuring rust errors
   clearScreen: false,
-  // Tauri expects a fixed port, fail if that port is not available
+  // ADD THE PORT HERE 👇
   server: {
+    port: 1420,
     strictPort: true,
   },
-  // Access the Tauri environment variables
   envPrefix: ["VITE_", "TAURI_"],
   build: {
     target:
