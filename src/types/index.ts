@@ -73,3 +73,4 @@ export interface StatementResult {
 }
 
 export type SortDir = "ASC" | "DESC";
+export type Theme = "light" | "dark";

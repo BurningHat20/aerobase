@@ -10,18 +10,22 @@ import TableView from "@/components/table-view/TableView";
 import SqlEditor from "@/components/table-view/SqlEditor";
 import { useTabManager } from "@/hooks/useTabManager";
 import { useKeyboard } from "@/hooks/useKeyboard";
-import type { ConnectionInfo } from "@/types";
+import type { ConnectionInfo, Theme } from "@/types";
 
 interface Props {
   connectionInfo: ConnectionInfo;
   databases: string[];
   onDisconnect: () => void;
+  theme: Theme;
+  toggleTheme: () => void;
 }
 
 export default function DashboardPage({
   connectionInfo,
   databases,
   onDisconnect,
+  theme,
+  toggleTheme,
 }: Props) {
   const {
     tabs,
@@ -38,10 +42,6 @@ export default function DashboardPage({
     openQueryTab(databases[0] ?? "");
   }, [databases, openQueryTab]);
 
-  const activeTab = tabs.find((t) => t.id === activeTabId) ?? null;
-
-  // ── Keyboard shortcuts ─────────────────────────────────────────────────────
-  // useMemo so the object reference is stable — avoids re-registering every render
   const shortcuts = useMemo(
     () => ({
       "ctrl+t": () => handleNewQuery(),
@@ -51,19 +51,22 @@ export default function DashboardPage({
     }),
     [handleNewQuery, activeTabId, closeTab]
   );
+
   useKeyboard(shortcuts);
+
+  const activeTab = tabs.find((t) => t.id === activeTabId) ?? null;
 
   return (
     <div className="h-screen flex flex-col bg-background text-foreground overflow-hidden">
-      {/* ── Top bar ── */}
       <TopBar
         connectionInfo={connectionInfo}
         onDisconnect={onDisconnect}
         onNewQuery={handleNewQuery}
         onOpenServerInfo={() => setServerPanelOpen(true)}
+        theme={theme}
+        toggleTheme={toggleTheme}
       />
 
-      {/* ── Body ── */}
       <div className="flex flex-1 overflow-hidden">
         <ResizableSidebar>
           <Sidebar
@@ -102,7 +105,6 @@ export default function DashboardPage({
         </div>
       </div>
 
-      {/* ── Server info slide-in panel ── */}
       <ServerInfoPanel
         open={serverPanelOpen}
         onClose={() => setServerPanelOpen(false)}

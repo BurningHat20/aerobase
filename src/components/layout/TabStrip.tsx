@@ -9,6 +9,16 @@ interface Props {
   onClose: (id: string) => void;
 }
 
+/**
+ * Browser-style tab strip.
+ *
+ * Visual contract:
+ * - The strip itself has bg-muted/30 + a bottom border.
+ * - Active tab: bg-background, has left/top/right border, bottom border is
+ *   REMOVED via negative margin-bottom + z-index — the tab appears "open"
+ *   and connected to the content below it.
+ * - Inactive tabs: no background, no border, subtle hover.
+ */
 export default function TabStrip({
   tabs,
   activeTabId,
@@ -18,47 +28,74 @@ export default function TabStrip({
   if (tabs.length === 0) return null;
 
   return (
-    <div className="shrink-0 border-b border-border bg-card/60 h-8">
-      <ScrollArea className="h-full w-full" type="hover">
-        <div className="flex items-end h-full px-1.5 gap-px">
+    /* The -mb-px trick: push the strip's bottom border behind the active tab */
+    <div className="shrink-0 border-b border-border bg-muted/20">
+      <ScrollArea className="w-full" type="hover">
+        <div className="flex items-end h-9 px-3 gap-0.5">
           {tabs.map((tab) => {
-            const isActive = tab.id === activeTabId;
+            const active = tab.id === activeTabId;
+            const isTable = tab.type === "table";
+
             return (
-              <div
+              <button
                 key={tab.id}
                 onClick={() => onActivate(tab.id)}
                 className={[
-                  "flex items-center gap-1.5 px-2.5 h-7 text-[11px] font-medium rounded-t cursor-pointer select-none transition-all group max-w-44 shrink-0",
-                  isActive
-                    ? "bg-background text-foreground shadow-sm border border-b-0 border-border"
-                    : "text-muted-foreground hover:text-foreground hover:bg-accent/50",
+                  // shared
+                  "relative flex items-center gap-1.5 px-3 h-8 text-xs font-medium",
+                  "rounded-t-lg transition-all select-none shrink-0 max-w-48 group",
+                  // active: sits on top of the border line below
+                  active
+                    ? "bg-background text-foreground border border-border border-b-background z-10 -mb-px shadow-none"
+                    : "text-muted-foreground hover:text-foreground hover:bg-background/50",
                 ].join(" ")}
               >
-                {tab.type === "table" ? (
-                  <RiTableLine className="size-3 shrink-0 text-primary/70" />
+                {/* Tab icon */}
+                {isTable ? (
+                  <RiTableLine
+                    className={`size-3 shrink-0 transition-colors ${
+                      active
+                        ? "text-primary"
+                        : "text-muted-foreground/50 group-hover:text-muted-foreground"
+                    }`}
+                  />
                 ) : (
-                  <RiCodeLine className="size-3 shrink-0 text-amber-500/70" />
+                  <RiCodeLine
+                    className={`size-3 shrink-0 transition-colors ${
+                      active
+                        ? "text-amber-500"
+                        : "text-muted-foreground/50 group-hover:text-muted-foreground"
+                    }`}
+                  />
                 )}
-                <span className="truncate">{tab.label}</span>
-                <button
+
+                {/* Label */}
+                <span className="truncate leading-none">{tab.label}</span>
+
+                {/* Close */}
+                <span
+                  role="button"
+                  tabIndex={-1}
                   onClick={(e) => {
                     e.stopPropagation();
                     onClose(tab.id);
                   }}
+                  onKeyDown={(e) => e.key === "Enter" && onClose(tab.id)}
                   className={[
-                    "shrink-0 rounded p-px ml-0.5 transition-all",
-                    isActive
-                      ? "text-muted-foreground hover:text-foreground hover:bg-accent"
-                      : "opacity-0 group-hover:opacity-100 text-muted-foreground/60 hover:text-foreground hover:bg-accent",
+                    "shrink-0 size-4 flex items-center justify-center rounded transition-all ml-0.5",
+                    "hover:bg-destructive/15 hover:text-destructive",
+                    active
+                      ? "text-muted-foreground/60"
+                      : "opacity-0 group-hover:opacity-100 text-muted-foreground/40",
                   ].join(" ")}
                 >
                   <RiCloseLine className="size-3" />
-                </button>
-              </div>
+                </span>
+              </button>
             );
           })}
         </div>
-        <ScrollBar orientation="horizontal" className="h-1.5" />
+        <ScrollBar orientation="horizontal" className="h-1" />
       </ScrollArea>
     </div>
   );

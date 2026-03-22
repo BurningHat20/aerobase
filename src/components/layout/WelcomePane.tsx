@@ -1,70 +1,83 @@
 import {
   RiCodeLine,
+  RiCommandLine,
   RiDatabase2Line,
-  RiKeyboardLine,
   RiTableLine,
 } from "@remixicon/react";
 
-interface Hint {
+interface Shortcut {
   icon: React.ReactNode;
-  label: string;
-  keys: string;
+  action: string;
+  how: string;
+  keys?: string[];
 }
 
-const HINTS: Hint[] = [
+const SHORTCUTS: Shortcut[] = [
   {
-    icon: <RiTableLine className="size-3.5 text-primary/70" />,
-    label: "Browse a table",
-    keys: "Click any table in the sidebar",
+    icon: <RiTableLine className="size-4 text-primary" />,
+    action: "Browse table",
+    how: "Click any table in the sidebar",
   },
   {
-    icon: <RiCodeLine className="size-3.5 text-amber-500/70" />,
-    label: "Run SQL",
-    keys: 'Click "SQL Editor" in the top bar',
+    icon: <RiCodeLine className="size-4 text-amber-500" />,
+    action: "SQL Editor",
+    how: "Click SQL Editor or press",
+    keys: ["Ctrl", "T"],
   },
   {
-    icon: <RiKeyboardLine className="size-3.5 text-sky-400/70" />,
-    label: "Execute query",
-    keys: "Ctrl + Enter",
+    icon: <RiCommandLine className="size-4 text-sky-500" />,
+    action: "Run query",
+    how: "Inside the editor, press",
+    keys: ["Ctrl", "↵"],
   },
 ];
 
-interface Props {
-  dbCount: number;
+function Kbd({ children }: { children: React.ReactNode }) {
+  return (
+    <span className="inline-flex items-center justify-center h-5 min-w-5 px-1 text-[10px] font-mono font-medium rounded border border-border bg-muted text-muted-foreground">
+      {children}
+    </span>
+  );
 }
 
-export default function WelcomePane({ dbCount }: Props) {
+export default function WelcomePane({ dbCount }: { dbCount: number }) {
   return (
-    <div className="h-full flex flex-col items-center justify-center gap-6 text-center px-8 select-none">
+    <div className="h-full flex flex-col items-center justify-center gap-8 select-none p-8">
       {/* Icon */}
-      <div className="size-14 rounded-2xl bg-muted border border-border flex items-center justify-center">
-        <RiDatabase2Line className="size-6 text-muted-foreground/25" />
+      <div className="flex flex-col items-center gap-3">
+        <div className="size-16 rounded-2xl border-2 border-dashed border-border flex items-center justify-center">
+          <RiDatabase2Line className="size-7 text-muted-foreground/25" />
+        </div>
+        <div className="text-center">
+          <h3 className="text-sm font-semibold text-foreground">
+            {dbCount} database{dbCount !== 1 ? "s" : ""} ready
+          </h3>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Select a table or open the SQL editor to get started
+          </p>
+        </div>
       </div>
 
-      {/* Copy */}
-      <div className="space-y-1.5 max-w-xs">
-        <h3 className="text-sm font-semibold text-foreground">
-          Ready to explore
-        </h3>
-        <p className="text-xs text-muted-foreground leading-relaxed">
-          {dbCount} database{dbCount !== 1 ? "s" : ""} connected. Open a table
-          or write a query to get started.
-        </p>
-      </div>
-
-      {/* Hints */}
-      <div className="flex flex-col gap-2 w-full max-w-xs">
-        {HINTS.map((h) => (
+      {/* Shortcuts */}
+      <div className="w-full max-w-xs space-y-2">
+        {SHORTCUTS.map((s) => (
           <div
-            key={h.label}
-            className="flex items-center gap-2.5 px-3 py-2 rounded-lg bg-card border border-border/50 text-left"
+            key={s.action}
+            className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl bg-card border border-border"
           >
-            {h.icon}
+            <div className="size-7 rounded-lg bg-muted flex items-center justify-center shrink-0">
+              {s.icon}
+            </div>
             <div className="flex-1 min-w-0">
-              <p className="text-[11px] font-medium text-foreground leading-tight">
-                {h.label}
+              <p className="text-xs font-medium text-foreground leading-tight">
+                {s.action}
               </p>
-              <p className="text-[10px] text-muted-foreground">{h.keys}</p>
+              <p className="text-[11px] text-muted-foreground mt-0.5 flex items-center gap-1 flex-wrap">
+                {s.how}
+                {s.keys?.map((k) => (
+                  <Kbd key={k}>{k}</Kbd>
+                ))}
+              </p>
             </div>
           </div>
         ))}

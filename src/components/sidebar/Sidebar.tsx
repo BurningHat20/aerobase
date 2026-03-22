@@ -5,10 +5,9 @@ import {
   RiArrowRightSLine,
   RiCodeLine,
   RiDatabase2Line,
-  RiLoader4Line,
+  RiLoader3Line,
   RiRefreshLine,
   RiSearchLine,
-  RiServerLine,
   RiTableLine,
 } from "@remixicon/react";
 
@@ -50,20 +49,14 @@ export default function Sidebar({
     async (db: string) => {
       const node = nodes[db];
       if (!node) return;
-
-      // Collapse
       if (node.expanded) {
         setNodes((p) => ({ ...p, [db]: { ...p[db], expanded: false } }));
         return;
       }
-
-      // Expand — use cached tables if available
       if (node.loaded) {
         setNodes((p) => ({ ...p, [db]: { ...p[db], expanded: true } }));
         return;
       }
-
-      // Fetch tables lazily
       setNodes((p) => ({
         ...p,
         [db]: { ...p[db], expanded: true, loading: true },
@@ -84,7 +77,7 @@ export default function Sidebar({
     [nodes]
   );
 
-  const q = search.toLowerCase();
+  const q = search.toLowerCase().trim();
 
   const visible = useMemo(() => {
     if (!q) return databases;
@@ -95,40 +88,44 @@ export default function Sidebar({
   }, [q, databases, nodes]);
 
   return (
-    <div className="h-full flex flex-col">
-      {/* Server pill */}
-      <div className="px-3 py-2.5 border-b border-border shrink-0">
-        <div className="flex items-center gap-1.5 text-xs">
-          <RiServerLine className="size-3.5 text-muted-foreground shrink-0" />
-          <span className="font-medium text-foreground truncate">
-            {connectionInfo.host}
-          </span>
+    <div className="h-full flex flex-col bg-sidebar">
+      {/* Server info header */}
+      <div className="px-3 py-3 border-b border-sidebar-border shrink-0">
+        <div className="flex items-center gap-2">
+          <div className="size-7 rounded-lg bg-primary/15 flex items-center justify-center shrink-0">
+            <RiDatabase2Line className="size-3.5 text-primary" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-xs font-semibold text-sidebar-foreground truncate leading-tight">
+              {connectionInfo.host}
+            </p>
+            <p className="text-[10px] text-muted-foreground font-mono">
+              :{connectionInfo.port} · {databases.length} databases
+            </p>
+          </div>
         </div>
-        <p className="text-[10px] text-muted-foreground mt-0.5 ml-5">
-          MySQL · Port {connectionInfo.port} · {databases.length} databases
-        </p>
       </div>
 
       {/* Search */}
-      <div className="px-2 py-2 border-b border-border shrink-0">
+      <div className="px-2.5 py-2 border-b border-sidebar-border shrink-0">
         <div className="relative">
           <RiSearchLine className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3 text-muted-foreground pointer-events-none" />
           <Input
-            placeholder="Search…"
+            placeholder="Search databases & tables…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="h-6 pl-7 text-[11px] bg-background/60 border-border/60"
+            className="h-7 pl-7 text-xs bg-background/50 border-border/60 rounded-lg placeholder:text-muted-foreground/50"
           />
         </div>
       </div>
 
-      {/* Label row */}
-      <div className="px-3 py-1 flex items-center justify-between shrink-0">
-        <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60">
-          Databases
+      {/* Label */}
+      <div className="flex items-center justify-between px-3 pt-2.5 pb-1 shrink-0">
+        <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">
+          {q ? `${visible.length}/${databases.length} results` : "Databases"}
         </span>
         <button
-          className="p-0.5 text-muted-foreground/40 hover:text-muted-foreground transition-colors rounded"
+          className="p-0.5 text-muted-foreground/35 hover:text-muted-foreground transition-colors rounded"
           title="Refresh"
         >
           <RiRefreshLine className="size-3" />
@@ -137,7 +134,13 @@ export default function Sidebar({
 
       {/* Tree */}
       <ScrollArea className="flex-1">
-        <div className="px-1.5 pb-3 space-y-px">
+        <div className="px-2 pb-4 space-y-px">
+          {visible.length === 0 && (
+            <p className="text-center text-xs text-muted-foreground/40 py-8">
+              No results for "{search}"
+            </p>
+          )}
+
           {visible.map((db) => {
             const node = nodes[db]!;
             const tableList =
@@ -150,50 +153,52 @@ export default function Sidebar({
                 {/* DB row */}
                 <button
                   onClick={() => toggleDb(db)}
-                  className="w-full flex items-center gap-1.5 px-2 py-1.5 rounded-md text-xs transition-all hover:bg-accent group"
+                  className="w-full flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-xs transition-colors hover:bg-sidebar-accent group text-sidebar-foreground"
                 >
-                  {node.loading ? (
-                    <RiLoader4Line className="size-3 text-muted-foreground animate-spin shrink-0" />
-                  ) : node.expanded ? (
-                    <RiArrowDownSLine className="size-3 text-muted-foreground shrink-0" />
-                  ) : (
-                    <RiArrowRightSLine className="size-3 text-muted-foreground shrink-0" />
-                  )}
-                  <RiDatabase2Line className="size-3.5 text-muted-foreground/60 group-hover:text-primary shrink-0 transition-colors" />
-                  <span className="truncate font-medium text-foreground/80 group-hover:text-foreground flex-1 text-left">
+                  <span className="size-3.5 flex items-center justify-center shrink-0">
+                    {node.loading ? (
+                      <RiLoader3Line className="size-3.5 text-muted-foreground animate-spin" />
+                    ) : node.expanded ? (
+                      <RiArrowDownSLine className="size-3.5 text-muted-foreground" />
+                    ) : (
+                      <RiArrowRightSLine className="size-3.5 text-muted-foreground" />
+                    )}
+                  </span>
+                  <RiDatabase2Line className="size-3.5 text-primary/60 shrink-0 group-hover:text-primary transition-colors" />
+                  <span className="flex-1 text-left truncate font-medium leading-none">
                     {db}
                   </span>
                   {node.loaded && (
-                    <span className="text-[10px] text-muted-foreground/35 shrink-0">
+                    <span className="text-[10px] text-muted-foreground/40 tabular-nums shrink-0">
                       {node.tables.length}
                     </span>
                   )}
                 </button>
 
-                {/* Tables subtree */}
+                {/* Tables sub-list */}
                 {node.expanded && !node.loading && (
-                  <div className="ml-5 mt-px border-l border-border/50 pl-2 space-y-px">
+                  <div className="ml-4 mt-px pl-2 border-l border-border/40">
                     {tableList.map((tbl) => (
                       <button
                         key={tbl}
                         onClick={() => onOpenTable(db, tbl)}
-                        className="w-full flex items-center gap-1.5 px-2 py-1 rounded-md text-[11px] text-muted-foreground hover:bg-accent hover:text-foreground transition-all group"
+                        className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-[11px] text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground transition-colors group"
                       >
-                        <RiTableLine className="size-3 shrink-0 text-muted-foreground/40 group-hover:text-primary transition-colors" />
-                        <span className="truncate">{tbl}</span>
+                        <RiTableLine className="size-3 text-muted-foreground/40 group-hover:text-primary transition-colors shrink-0" />
+                        <span className="truncate font-medium">{tbl}</span>
                       </button>
                     ))}
 
                     {tableList.length === 0 && node.loaded && (
-                      <p className="px-2 py-1 text-[11px] text-muted-foreground/40 italic">
-                        {q ? "No matches" : "No tables"}
+                      <p className="px-2 py-1.5 text-[11px] text-muted-foreground/35 italic">
+                        {q ? "No matches" : "Empty database"}
                       </p>
                     )}
 
                     {/* New query shortcut */}
                     <button
                       onClick={() => onOpenQuery(db)}
-                      className="w-full flex items-center gap-1.5 px-2 py-1 mt-1 rounded-md text-[11px] text-muted-foreground/40 hover:text-primary hover:bg-accent transition-all border border-dashed border-border/30 hover:border-primary/30"
+                      className="w-full flex items-center gap-2 px-2 py-1.5 mt-1 rounded-lg text-[11px] text-muted-foreground/40 hover:text-primary hover:bg-sidebar-accent transition-all border border-dashed border-border/30 hover:border-primary/30"
                     >
                       <RiCodeLine className="size-3 shrink-0" />
                       New query
@@ -203,12 +208,6 @@ export default function Sidebar({
               </div>
             );
           })}
-
-          {visible.length === 0 && (
-            <p className="py-5 text-center text-[11px] text-muted-foreground/50">
-              No results for &quot;{search}&quot;
-            </p>
-          )}
         </div>
       </ScrollArea>
     </div>

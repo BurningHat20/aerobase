@@ -8,10 +8,11 @@ import {
   RiArrowUpSLine,
   RiDatabase2Line,
   RiDownloadLine,
-  RiLoader4Line,
+  RiLoader4Fill,
   RiSearchLine,
 } from "@remixicon/react";
 
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   ContextMenu,
@@ -35,6 +36,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { copyToClipboard, toCSV, toInsert, toJSON } from "@/hooks/useClipboard";
 import type { SortDir, TableDataResult } from "@/types";
@@ -81,7 +83,6 @@ export default function DataGrid({ db, table }: Props) {
     [db, table]
   );
 
-  // Reset on table change
   useEffect(() => {
     setPage(0);
     setData(null);
@@ -89,7 +90,7 @@ export default function DataGrid({ db, table }: Props) {
     setSortDir("ASC");
     setFilter("");
     fetchData(0, pageSize, null, "ASC");
-  }, [db, table]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [db, table]); // eslint-disable-line
 
   const goTo = (pg: number) => {
     setPage(pg);
@@ -104,56 +105,51 @@ export default function DataGrid({ db, table }: Props) {
   };
 
   const handleSort = (col: string) => {
-    let newDir: SortDir = "ASC";
-    if (col === sortCol) newDir = sortDir === "ASC" ? "DESC" : "ASC";
+    const dir: SortDir = col === sortCol && sortDir === "ASC" ? "DESC" : "ASC";
     setSortCol(col);
-    setSortDir(newDir);
+    setSortDir(dir);
     setPage(0);
-    fetchData(0, pageSize, col, newDir);
+    fetchData(0, pageSize, col, dir);
   };
 
-  // ── Client-side quick filter on visible rows ──────────────────────────────
   const visibleRows = data
     ? filter.trim()
-      ? data.rows.filter((row) =>
-          row.some((cell) => cell.toLowerCase().includes(filter.toLowerCase()))
+      ? data.rows.filter((r) =>
+          r.some((c) => c.toLowerCase().includes(filter.toLowerCase()))
         )
       : data.rows
     : [];
 
-  // ── Loading skeleton ──────────────────────────────────────────────────────
-  if (loading && !data) {
+  // ── Loading skeleton ─────────────────────────────────────────────────────
+  if (loading && !data)
     return (
-      <div className="p-4 space-y-1.5">
-        <Skeleton className="h-7 w-full" />
-        {Array.from({ length: 10 }).map((_, i) => (
+      <div className="p-4 space-y-2">
+        <Skeleton className="h-8 w-full" />
+        {Array.from({ length: 8 }).map((_, i) => (
           <Skeleton
             key={i}
-            className="h-6 w-full"
-            style={{ opacity: 1 - i * 0.08 }}
+            className="h-7 w-full"
+            style={{ opacity: 1 - i * 0.1 }}
           />
         ))}
       </div>
     );
-  }
 
-  if (error) {
+  if (error)
     return (
-      <div className="flex items-start gap-2 m-4 p-3 rounded-lg text-xs bg-destructive/10 text-destructive border border-destructive/20">
-        <RiAlertLine className="size-3.5 shrink-0 mt-px" />
+      <div className="flex items-start gap-2.5 m-4 p-3.5 rounded-xl text-xs bg-destructive/8 text-destructive border border-destructive/20">
+        <RiAlertLine className="size-4 shrink-0 mt-px" />
         <span className="font-mono leading-relaxed">{error}</span>
       </div>
     );
-  }
 
-  if (!data || data.columns.length === 0) {
+  if (!data || !data.columns.length)
     return (
       <div className="flex flex-col items-center justify-center h-full gap-3 text-muted-foreground">
-        <RiDatabase2Line className="size-8 opacity-15" />
-        <p className="text-xs">This table has no columns</p>
+        <RiDatabase2Line className="size-10 opacity-10" />
+        <p className="text-xs font-medium">No columns in this table</p>
       </div>
     );
-  }
 
   const totalPages = Math.max(1, Math.ceil(data.total / pageSize));
   const from = page * pageSize + 1;
@@ -161,32 +157,101 @@ export default function DataGrid({ db, table }: Props) {
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      {/* ── Filter bar ──────────────────────────────────────────────────── */}
-      <div className="shrink-0 flex items-center gap-2 px-3 py-1.5 border-b border-border bg-card/20">
-        <div className="relative flex-1 max-w-64">
+      {/* ── Toolbar ── */}
+      <div className="shrink-0 flex items-center gap-2 px-3 h-10 border-b border-border bg-card/50">
+        {/* Quick filter */}
+        <div className="relative w-56">
           <RiSearchLine className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3 text-muted-foreground pointer-events-none" />
           <Input
-            placeholder="Filter current page…"
+            placeholder="Filter visible rows…"
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
-            className="h-6 pl-7 text-[11px] bg-background/60 border-border/50"
+            className="h-7 pl-7 text-xs bg-background/60 border-border/60 placeholder:text-muted-foreground/40"
           />
         </div>
+
         {filter && (
-          <span className="text-[11px] text-muted-foreground tabular-nums shrink-0">
-            {visibleRows.length} / {data.rows.length} rows
-          </span>
+          <Badge
+            variant="secondary"
+            className="h-5 text-[10px] px-1.5 font-mono shrink-0"
+          >
+            {visibleRows.length}/{data.rows.length}
+          </Badge>
         )}
+
+        {sortCol && (
+          <>
+            <Separator orientation="vertical" className="h-4" />
+            <span className="flex items-center gap-1 text-[11px] text-muted-foreground shrink-0">
+              Sorted by
+              <span className="font-mono text-foreground/70 font-medium">
+                {sortCol}
+              </span>
+              {sortDir === "ASC" ? (
+                <RiArrowUpSLine className="size-3.5 text-primary" />
+              ) : (
+                <RiArrowDownSLine className="size-3.5 text-primary" />
+              )}
+              <button
+                onClick={() => {
+                  setSortCol(null);
+                  setSortDir("ASC");
+                  fetchData(page, pageSize, null, "ASC");
+                }}
+                className="text-muted-foreground/50 hover:text-muted-foreground text-[10px] underline ml-0.5"
+              >
+                clear
+              </button>
+            </span>
+          </>
+        )}
+
+        <div className="flex-1" />
+
+        {/* Export */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 px-2.5 text-xs text-muted-foreground hover:text-foreground gap-1.5"
+            >
+              <RiDownloadLine className="size-3.5" />
+              Export
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="text-xs w-44">
+            <DropdownMenuItem
+              onClick={() =>
+                copyToClipboard(
+                  toCSV(data.columns, data.rows),
+                  `${data.rows.length} rows as CSV`
+                )
+              }
+            >
+              Copy page as CSV
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() =>
+                copyToClipboard(
+                  toJSON(data.columns, data.rows),
+                  `${data.rows.length} rows as JSON`
+                )
+              }
+            >
+              Copy page as JSON
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
-      {/* ── Table ─────────────────────────────────────────────────────────── */}
+      {/* ── Table ── */}
       <div className="relative flex-1 overflow-hidden">
         <ScrollArea className="h-full">
           <table className="w-full text-xs border-collapse">
             <thead className="sticky top-0 z-10">
-              <tr className="border-b border-border bg-card/90 backdrop-blur-sm">
-                {/* Row # */}
-                <th className="w-9 px-2 py-2 text-right font-normal text-muted-foreground/35 border-r border-border/40 select-none">
+              <tr className="border-b-2 border-border bg-card">
+                <th className="w-10 px-2 py-2.5 text-right text-[10px] font-normal text-muted-foreground/30 border-r border-border/30 select-none">
                   #
                 </th>
                 {data.columns.map((col) => {
@@ -195,12 +260,17 @@ export default function DataGrid({ db, table }: Props) {
                     <th
                       key={col}
                       onClick={() => handleSort(col)}
-                      className="px-3 py-2 text-left font-semibold text-foreground/70 whitespace-nowrap border-r border-border/30 last:border-r-0 min-w-24 cursor-pointer hover:bg-accent/60 transition-colors select-none group"
+                      className={[
+                        "px-3 py-2.5 text-left text-[11px] font-semibold whitespace-nowrap cursor-pointer",
+                        "border-r border-border/30 last:border-r-0 min-w-24 select-none",
+                        "transition-colors hover:bg-accent/50 group",
+                        isActive
+                          ? "text-primary bg-primary/5"
+                          : "text-muted-foreground",
+                      ].join(" ")}
                     >
                       <div className="flex items-center gap-1">
-                        <span className={isActive ? "text-primary" : ""}>
-                          {col}
-                        </span>
+                        {col}
                         {isActive ? (
                           sortDir === "ASC" ? (
                             <RiArrowUpSLine className="size-3.5 text-primary shrink-0" />
@@ -208,7 +278,7 @@ export default function DataGrid({ db, table }: Props) {
                             <RiArrowDownSLine className="size-3.5 text-primary shrink-0" />
                           )
                         ) : (
-                          <RiArrowUpSLine className="size-3.5 text-muted-foreground/20 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
+                          <RiArrowUpSLine className="size-3.5 opacity-0 group-hover:opacity-30 shrink-0 transition-opacity" />
                         )}
                       </div>
                     </th>
@@ -220,29 +290,32 @@ export default function DataGrid({ db, table }: Props) {
               {visibleRows.map((row, ri) => (
                 <ContextMenu key={ri}>
                   <ContextMenuTrigger asChild>
-                    <tr className="border-b border-border/30 hover:bg-accent/40 transition-colors">
-                      <td className="w-9 px-2 py-1.5 text-right font-mono text-[10px] text-muted-foreground/30 border-r border-border/20 select-none">
+                    <tr
+                      className={`border-b border-border/30 hover:bg-accent/25 transition-colors ${
+                        ri % 2 !== 0 ? "bg-muted/10" : ""
+                      }`}
+                    >
+                      <td className="w-10 px-2 py-2 text-right font-mono text-[10px] text-muted-foreground/25 border-r border-border/20 select-none tabular-nums">
                         {from + ri}
                       </td>
                       {row.map((cell, ci) => (
                         <td
                           key={ci}
-                          title={cell === "NULL" ? undefined : cell}
-                          className="px-3 py-1.5 font-mono border-r border-border/15 last:border-r-0 max-w-64 overflow-hidden text-ellipsis whitespace-nowrap cursor-pointer hover:bg-primary/5 transition-colors"
+                          title={cell !== "NULL" ? cell : undefined}
                           onContextMenu={() => {
                             ctxRef.current = { row, colIdx: ci };
                           }}
                           onClick={() =>
-                            cell !== "NULL" &&
-                            copyToClipboard(cell, "Cell copied")
+                            cell !== "NULL" && copyToClipboard(cell, "Copied")
                           }
+                          className="px-3 py-2 font-mono text-[11px] border-r border-border/15 last:border-r-0 max-w-64 overflow-hidden text-ellipsis whitespace-nowrap cursor-pointer hover:bg-primary/5 transition-colors"
                         >
                           {cell === "NULL" ? (
-                            <span className="text-muted-foreground/25 italic text-[11px]">
+                            <span className="text-muted-foreground/20 italic text-[10px]">
                               NULL
                             </span>
                           ) : (
-                            <span className="text-foreground/75">{cell}</span>
+                            <span className="text-foreground/80">{cell}</span>
                           )}
                         </td>
                       ))}
@@ -252,9 +325,8 @@ export default function DataGrid({ db, table }: Props) {
                   <ContextMenuContent className="w-52 text-xs">
                     <ContextMenuItem
                       onClick={() => {
-                        const ctx = ctxRef.current;
-                        if (ctx)
-                          copyToClipboard(ctx.row[ctx.colIdx], "Cell copied");
+                        const c = ctxRef.current;
+                        if (c) copyToClipboard(c.row[c.colIdx], "Cell copied");
                       }}
                     >
                       Copy Cell Value
@@ -273,7 +345,7 @@ export default function DataGrid({ db, table }: Props) {
                             null,
                             2
                           ),
-                          "Row copied as JSON"
+                          "Copied as JSON"
                         )
                       }
                     >
@@ -283,7 +355,7 @@ export default function DataGrid({ db, table }: Props) {
                       onClick={() =>
                         copyToClipboard(
                           `${data.columns.join(",")}\n${row.join(",")}`,
-                          "Row copied as CSV"
+                          "Copied as CSV"
                         )
                       }
                     >
@@ -307,9 +379,9 @@ export default function DataGrid({ db, table }: Props) {
                 <tr>
                   <td
                     colSpan={data.columns.length + 1}
-                    className="py-8 text-center text-xs text-muted-foreground/40"
+                    className="py-12 text-center text-xs text-muted-foreground/40"
                   >
-                    No rows match &quot;{filter}&quot;
+                    No rows match "{filter}"
                   </td>
                 </tr>
               )}
@@ -318,79 +390,36 @@ export default function DataGrid({ db, table }: Props) {
           <ScrollBar orientation="horizontal" />
         </ScrollArea>
 
-        {/* Refresh overlay */}
         {loading && data && (
-          <div className="absolute inset-0 bg-background/50 backdrop-blur-[1px] flex items-center justify-center pointer-events-none">
-            <RiLoader4Line className="size-5 animate-spin text-muted-foreground" />
+          <div className="absolute inset-0 bg-background/60 backdrop-blur-[1px] flex items-center justify-center pointer-events-none">
+            <RiLoader4Fill className="size-5 animate-spin text-primary/60" />
           </div>
         )}
       </div>
 
-      {/* ── Pagination + export bar ─────────────────────────────────────── */}
-      <div className="shrink-0 border-t border-border bg-card/50 flex items-center justify-between px-3 py-1.5 gap-4">
-        <span className="text-[11px] text-muted-foreground tabular-nums">
+      {/* ── Pagination footer ── */}
+      <div className="shrink-0 flex items-center justify-between px-3 h-9 border-t border-border bg-card/30 text-xs">
+        {/* Count */}
+        <span className="text-muted-foreground tabular-nums">
           {data.total === 0 ? (
             "No rows"
           ) : (
             <>
               {from.toLocaleString()}–{to.toLocaleString()} of{" "}
-              <strong className="text-foreground">
+              <strong className="text-foreground font-semibold">
                 {data.total.toLocaleString()}
               </strong>{" "}
               rows
-              {sortCol && (
-                <span className="ml-2 text-muted-foreground/50">
-                  sorted by{" "}
-                  <span className="text-foreground/60 font-mono">
-                    {sortCol}
-                  </span>{" "}
-                  {sortDir === "ASC" ? "↑" : "↓"}
-                </span>
-              )}
             </>
           )}
         </span>
 
-        <div className="flex items-center gap-2">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-6 px-2 text-[11px] text-muted-foreground hover:text-foreground gap-1"
-              >
-                <RiDownloadLine className="size-3" />
-                Export
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="text-xs w-44">
-              <DropdownMenuItem
-                onClick={() =>
-                  copyToClipboard(
-                    toCSV(data.columns, data.rows),
-                    `${data.rows.length} rows copied as CSV`
-                  )
-                }
-              >
-                Copy page as CSV
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() =>
-                  copyToClipboard(
-                    toJSON(data.columns, data.rows),
-                    `${data.rows.length} rows copied as JSON`
-                  )
-                }
-              >
-                Copy page as JSON
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-
-          <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-            Rows
+        <div className="flex items-center gap-2.5">
+          {/* Rows per page */}
+          <div className="flex items-center gap-1.5 text-muted-foreground">
+            <span>Rows</span>
             <Select value={String(pageSize)} onValueChange={handlePageSize}>
-              <SelectTrigger className="h-6 w-14 text-xs border-border/50 bg-background/60">
+              <SelectTrigger className="h-6 w-16 text-xs border-border/50 bg-background/60">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -403,30 +432,34 @@ export default function DataGrid({ db, table }: Props) {
             </Select>
           </div>
 
+          {/* Page navigation */}
           {totalPages > 1 && (
-            <div className="flex items-center gap-1">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-6 w-6 p-0"
-                disabled={page === 0 || loading}
-                onClick={() => goTo(page - 1)}
-              >
-                <RiArrowLeftSLine className="size-3.5" />
-              </Button>
-              <span className="text-[11px] text-muted-foreground tabular-nums px-1">
-                {page + 1} / {totalPages}
-              </span>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-6 w-6 p-0"
-                disabled={page >= totalPages - 1 || loading}
-                onClick={() => goTo(page + 1)}
-              >
-                <RiArrowRightSLine className="size-3.5" />
-              </Button>
-            </div>
+            <>
+              <Separator orientation="vertical" className="h-4" />
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 w-6 p-0 rounded"
+                  disabled={page === 0 || loading}
+                  onClick={() => goTo(page - 1)}
+                >
+                  <RiArrowLeftSLine className="size-3.5" />
+                </Button>
+                <span className="text-muted-foreground tabular-nums px-1 min-w-16 text-center">
+                  {page + 1} of {totalPages}
+                </span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 w-6 p-0 rounded"
+                  disabled={page >= totalPages - 1 || loading}
+                  onClick={() => goTo(page + 1)}
+                >
+                  <RiArrowRightSLine className="size-3.5" />
+                </Button>
+              </div>
+            </>
           )}
         </div>
       </div>

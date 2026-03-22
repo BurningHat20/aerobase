@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { RiAlertLine, RiFileCopyLine, RiLoader4Line } from "@remixicon/react";
+import { RiAlertLine, RiFileCopyLine } from "@remixicon/react";
 
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";

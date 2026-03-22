@@ -3,12 +3,14 @@ import { invoke } from "@tauri-apps/api/core";
 import {
   RiAlertLine,
   RiCheckboxCircleLine,
+  RiCodeLine,
   RiDownloadLine,
-  RiLoader4Line,
-  RiPlayLine,
+  RiLoader4Fill,
+  RiPlayFill,
   RiTimeLine,
 } from "@remixicon/react";
 
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -24,31 +26,29 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { copyToClipboard, toCSV, toJSON } from "@/hooks/useClipboard";
 import type { QueryResult, StatementResult } from "@/types";
 
-// ── Statement parser ──────────────────────────────────────────────────────────
-// Quote-aware split on `;` — handles single and double quoted strings.
+// ── Statement splitter (quote-aware) ─────────────────────────────────────────
 function splitStatements(sql: string): string[] {
   const stmts: string[] = [];
-  let cur = "";
-  let inSingle = false;
-  let inDouble = false;
-
-  for (let i = 0; i < sql.length; i++) {
-    const ch = sql[i];
-    if (ch === "'" && !inDouble) {
-      inSingle = !inSingle;
+  let cur = "",
+    inS = false,
+    inD = false;
+  for (const ch of sql) {
+    if (ch === "'" && !inD) {
+      inS = !inS;
       cur += ch;
       continue;
     }
-    if (ch === '"' && !inSingle) {
-      inDouble = !inDouble;
+    if (ch === '"' && !inS) {
+      inD = !inD;
       cur += ch;
       continue;
     }
-    if (ch === ";" && !inSingle && !inDouble) {
+    if (ch === ";" && !inS && !inD) {
       const t = cur.trim();
       if (t) stmts.push(t);
       cur = "";
@@ -71,14 +71,18 @@ function ResultTable({
 }) {
   if (!result.is_select) {
     return (
-      <div className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-        <RiCheckboxCircleLine className="size-3.5 shrink-0" />
-        <span>
-          {label && <span className="text-muted-foreground mr-2">{label}</span>}
-          OK — <strong>{result.rows_affected.toLocaleString()}</strong> row
-          {result.rows_affected !== 1 ? "s" : ""} affected
+      <div className="flex items-center gap-2.5 px-4 py-3 rounded-xl bg-emerald-500/8 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 text-xs">
+        <RiCheckboxCircleLine className="size-4 shrink-0" />
+        <span className="flex-1">
+          {label && (
+            <span className="text-muted-foreground mr-2 font-mono">
+              {label}
+            </span>
+          )}
+          Query OK — <strong>{result.rows_affected.toLocaleString()}</strong>{" "}
+          row{result.rows_affected !== 1 ? "s" : ""} affected
         </span>
-        <span className="ml-auto flex items-center gap-1 text-muted-foreground">
+        <span className="flex items-center gap-1 text-muted-foreground tabular-nums">
           <RiTimeLine className="size-3" />
           {result.query_time_ms}ms
         </span>
@@ -87,17 +91,24 @@ function ResultTable({
   }
 
   return (
-    <div className="flex flex-col border border-border rounded-lg overflow-hidden">
-      {/* Result toolbar */}
-      <div className="flex items-center gap-3 px-3 py-1.5 bg-card/30 border-b border-border text-[11px] text-muted-foreground">
-        {label && <span className="font-mono text-foreground/50">{label}</span>}
-        <span>
-          <strong className="text-foreground">
-            {result.rows.length.toLocaleString()}
-          </strong>{" "}
-          row{result.rows.length !== 1 ? "s" : ""}
-        </span>
-        <span className="flex items-center gap-1">
+    <div className="flex flex-col border border-border rounded-xl overflow-hidden">
+      {/* Result header */}
+      <div className="flex items-center gap-3 px-3 py-2 bg-muted/30 border-b border-border text-xs">
+        {label && (
+          <>
+            <span className="font-mono text-muted-foreground/60 text-[11px]">
+              {label}
+            </span>
+            <Separator orientation="vertical" className="h-3.5" />
+          </>
+        )}
+        <Badge
+          variant="secondary"
+          className="h-5 text-[10px] px-1.5 font-mono gap-1"
+        >
+          {result.rows.length.toLocaleString()} rows
+        </Badge>
+        <span className="flex items-center gap-1 text-muted-foreground tabular-nums">
           <RiTimeLine className="size-3" />
           {result.query_time_ms}ms
         </span>
@@ -107,7 +118,7 @@ function ResultTable({
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-5 px-1.5 text-[11px] text-muted-foreground hover:text-foreground gap-1"
+                className="h-6 px-2 text-[11px] gap-1 text-muted-foreground hover:text-foreground"
               >
                 <RiDownloadLine className="size-3" />
                 Export
@@ -139,19 +150,18 @@ function ResultTable({
         </div>
       </div>
 
-      {/* Grid */}
       {result.rows.length > 0 ? (
-        <ScrollArea className="max-h-72">
+        <ScrollArea className="max-h-64">
           <table className="w-full text-xs border-collapse">
             <thead className="sticky top-0 z-10">
-              <tr className="border-b border-border bg-card/90">
-                <th className="w-9 px-2 py-1.5 text-right font-normal text-muted-foreground/35 border-r border-border/40 select-none">
+              <tr className="border-b border-border bg-card">
+                <th className="w-9 px-2 py-2 text-right text-[10px] font-normal text-muted-foreground/30 border-r border-border/40 select-none">
                   #
                 </th>
                 {result.columns.map((col) => (
                   <th
                     key={col}
-                    className="px-3 py-1.5 text-left font-semibold text-foreground/70 whitespace-nowrap border-r border-border/30 last:border-r-0 min-w-20"
+                    className="px-3 py-2 text-left text-[11px] font-semibold text-muted-foreground whitespace-nowrap border-r border-border/30 last:border-r-0 min-w-20"
                   >
                     {col}
                   </th>
@@ -162,9 +172,9 @@ function ResultTable({
               {result.rows.map((row, ri) => (
                 <tr
                   key={ri}
-                  className="border-b border-border/30 hover:bg-accent/40"
+                  className="border-b border-border/30 hover:bg-accent/30 transition-colors"
                 >
-                  <td className="w-9 px-2 py-1.5 text-right font-mono text-[10px] text-muted-foreground/30 border-r border-border/20 select-none">
+                  <td className="px-2 py-1.5 text-right font-mono text-[10px] text-muted-foreground/25 border-r border-border/20 select-none tabular-nums">
                     {ri + 1}
                   </td>
                   {row.map((cell, ci) => (
@@ -172,16 +182,16 @@ function ResultTable({
                       key={ci}
                       title={cell === "NULL" ? undefined : cell}
                       onClick={() =>
-                        cell !== "NULL" && copyToClipboard(cell, "Cell copied")
+                        cell !== "NULL" && copyToClipboard(cell, "Copied")
                       }
-                      className="px-3 py-1.5 font-mono border-r border-border/15 last:border-r-0 max-w-60 overflow-hidden text-ellipsis whitespace-nowrap cursor-pointer hover:bg-primary/5 transition-colors"
+                      className="px-3 py-1.5 font-mono text-[11px] border-r border-border/15 last:border-r-0 max-w-60 overflow-hidden text-ellipsis whitespace-nowrap cursor-pointer hover:bg-primary/5 transition-colors"
                     >
                       {cell === "NULL" ? (
-                        <span className="text-muted-foreground/25 italic text-[11px]">
+                        <span className="text-muted-foreground/25 italic">
                           NULL
                         </span>
                       ) : (
-                        <span className="text-foreground/75">{cell}</span>
+                        <span className="text-foreground/80">{cell}</span>
                       )}
                     </td>
                   ))}
@@ -192,15 +202,15 @@ function ResultTable({
           <ScrollBar orientation="horizontal" />
         </ScrollArea>
       ) : (
-        <p className="py-6 text-center text-xs text-muted-foreground/50">
-          Query returned no rows
+        <p className="py-8 text-center text-xs text-muted-foreground/40">
+          No rows returned
         </p>
       )}
     </div>
   );
 }
 
-// ── SqlEditor ─────────────────────────────────────────────────────────────────
+// ── Main ──────────────────────────────────────────────────────────────────────
 interface Props {
   db: string;
   databases: string[];
@@ -214,47 +224,41 @@ export default function SqlEditor({ db, databases }: Props) {
 
   const runAll = useCallback(async () => {
     const stmts = splitStatements(sql);
-    if (stmts.length === 0) return;
-
+    if (!stmts.length) return;
     setRunning(true);
     setResults([]);
-
     const out: StatementResult[] = [];
-
     for (let i = 0; i < stmts.length; i++) {
-      const stmt = stmts[i];
       try {
         const res = await invoke<QueryResult>("execute_query", {
           dbName: selectedDb,
-          sql: stmt,
+          sql: stmts[i],
         });
-        out.push({ index: i, sql: stmt, result: res, error: "" });
+        out.push({ index: i, sql: stmts[i], result: res, error: "" });
       } catch (err) {
-        out.push({ index: i, sql: stmt, result: null, error: String(err) });
-        // Stop on first error — matches MySQL's default behaviour
+        out.push({ index: i, sql: stmts[i], result: null, error: String(err) });
         break;
       }
     }
-
     setResults(out);
     setRunning(false);
   }, [sql, selectedDb]);
-
-  const onKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
-      e.preventDefault();
-      runAll();
-    }
-  };
 
   const stmtCount = splitStatements(sql).length;
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      {/* ── Toolbar ────────────────────────────────────────────────────── */}
-      <div className="shrink-0 flex items-center gap-2 px-3 py-2 border-b border-border bg-card/50">
+      {/* ── Editor toolbar ── */}
+      <div className="shrink-0 flex items-center gap-2 px-3 h-10 border-b border-border bg-card/50">
+        <RiCodeLine className="size-3.5 text-amber-500 shrink-0" />
+        <span className="text-xs font-medium text-foreground/70">
+          SQL Editor
+        </span>
+        <Separator orientation="vertical" className="h-4 mx-0.5" />
+
+        {/* DB selector */}
         <Select value={selectedDb} onValueChange={setSelectedDb}>
-          <SelectTrigger className="h-7 w-48 text-xs border-border/50 bg-background/60">
+          <SelectTrigger className="h-7 w-44 text-xs border-border/60 bg-background/60 font-mono">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -269,69 +273,89 @@ export default function SqlEditor({ db, databases }: Props) {
         <div className="flex-1" />
 
         {stmtCount > 1 && (
-          <span className="text-[10px] text-muted-foreground/50 select-none">
-            {stmtCount} statements
-          </span>
+          <Badge
+            variant="secondary"
+            className="h-5 text-[10px] px-1.5 font-mono"
+          >
+            {stmtCount} stmts
+          </Badge>
         )}
-        <span className="text-[10px] text-muted-foreground/40 select-none">
-          Ctrl+Enter to run
+
+        <span className="text-[10px] text-muted-foreground/40 select-none hidden sm:block">
+          Ctrl+Enter
         </span>
 
         <Button
           size="sm"
-          className="h-7 px-3 text-xs gap-1.5"
+          className="h-7 px-3 text-xs gap-1.5 font-medium"
           onClick={runAll}
           disabled={running || !sql.trim()}
         >
           {running ? (
-            <RiLoader4Line className="size-3.5 animate-spin" />
+            <RiLoader4Fill className="size-3.5 animate-spin" />
           ) : (
-            <RiPlayLine className="size-3.5" />
+            <RiPlayFill className="size-3.5" />
           )}
-          Run
+          {running ? "Running…" : "Run"}
         </Button>
       </div>
 
-      {/* ── Editor ─────────────────────────────────────────────────────── */}
-      <div className="shrink-0 h-36 border-b border-border">
+      {/* ── Editor ── */}
+      <div
+        className="shrink-0 relative border-b border-border"
+        style={{ height: 160 }}
+      >
         <Textarea
           value={sql}
           onChange={(e) => setSql(e.target.value)}
-          onKeyDown={onKeyDown}
+          onKeyDown={(e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+              e.preventDefault();
+              runAll();
+            }
+          }}
           spellCheck={false}
-          placeholder="SELECT * FROM table_name LIMIT 100;&#10;&#10;-- Separate multiple statements with semicolons"
-          className="w-full h-full resize-none rounded-none border-0 font-mono text-xs leading-relaxed p-3 bg-background focus-visible:ring-0 focus-visible:ring-offset-0"
+          placeholder={
+            "SELECT * FROM table_name LIMIT 100;\n\n-- Separate multiple statements with semicolons"
+          }
+          className="absolute inset-0 w-full h-full resize-none rounded-none border-0 font-mono text-xs leading-relaxed p-3.5 bg-background focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-muted-foreground/30"
         />
+        {/* Line number gutter hint */}
+        <div className="absolute left-0 top-0 bottom-0 w-8 border-r border-border/40 bg-muted/20 pointer-events-none" />
       </div>
 
-      {/* ── Results ─────────────────────────────────────────────────────── */}
+      {/* ── Results ── */}
       <ScrollArea className="flex-1">
-        <div className="p-3 space-y-3">
-          {results.length === 0 && !running && (
-            <p className="text-center text-xs text-muted-foreground/35 py-8 select-none">
-              Write a query above and press Run or Ctrl+Enter
-            </p>
+        <div className="p-4 space-y-3">
+          {!results.length && !running && (
+            <div className="flex flex-col items-center justify-center py-12 gap-2 text-center">
+              <RiCodeLine className="size-8 text-muted-foreground/15" />
+              <p className="text-xs text-muted-foreground/40">
+                Write a query above and press{" "}
+                <kbd className="text-[10px] px-1 py-px rounded bg-muted font-mono">
+                  Ctrl+Enter
+                </kbd>
+              </p>
+            </div>
           )}
 
           {running && (
             <div className="flex items-center justify-center gap-2 py-8 text-xs text-muted-foreground">
-              <RiLoader4Line className="size-4 animate-spin" />
-              Running…
+              <RiLoader4Fill className="size-4 animate-spin text-primary" />
+              Executing…
             </div>
           )}
 
           {results.map((sr) => (
             <div key={sr.index}>
-              {/* Statement label — only shown when multiple */}
               {results.length > 1 && (
-                <p className="text-[10px] text-muted-foreground/40 font-mono mb-1 truncate px-0.5">
+                <p className="text-[10px] text-muted-foreground/40 font-mono mb-1.5 px-0.5 truncate">
                   [{sr.index + 1}] {sr.sql.slice(0, 80)}
                   {sr.sql.length > 80 ? "…" : ""}
                 </p>
               )}
-
               {sr.error ? (
-                <div className="flex items-start gap-2 p-2.5 rounded-lg text-xs bg-destructive/10 text-destructive border border-destructive/20">
+                <div className="flex items-start gap-2.5 px-3.5 py-3 rounded-xl text-xs bg-destructive/8 text-destructive border border-destructive/20">
                   <RiAlertLine className="size-3.5 shrink-0 mt-px" />
                   <span className="font-mono leading-relaxed break-all">
                     {sr.error}
