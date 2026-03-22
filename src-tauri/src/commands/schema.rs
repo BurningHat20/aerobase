@@ -283,6 +283,11 @@ pub async fn execute_query(
     let db_name = db_name.trim().to_string();
     quote_identifier(&db_name)?;
 
+    // Reject excessively large queries (1 MB limit)
+    if sql.len() > 1_048_576 {
+        return Err("Query too large (max 1 MB)".to_string());
+    }
+
     let opts = state.get_connect_opts()?.database(&db_name);
 
     let exec_pool = sqlx::mysql::MySqlPoolOptions::new()
@@ -294,12 +299,20 @@ pub async fn execute_query(
 
     let start = Instant::now();
 
-    let upper = sql.to_uppercase();
-    let is_read = ["SELECT ", "SHOW ", "DESCRIBE ", "DESC ", "EXPLAIN "]
+    // Strip leading comments and whitespace to detect the real statement type
+    let stripped = strip_leading_comments(&sql);
+    let upper = stripped.to_uppercase();
+    let is_read = ["SELECT ", "SELECT\n", "SELECT\t",
+                    "SHOW ", "SHOW\n", "SHOW\t",
+                    "DESCRIBE ", "DESCRIBE\n", "DESCRIBE\t",
+                    "DESC ", "DESC\n", "DESC\t",
+                    "EXPLAIN ", "EXPLAIN\n", "EXPLAIN\t",
+                    "WITH ", "WITH\n", "WITH\t",
+                    "(SELECT"]
         .iter()
         .any(|kw| upper.starts_with(kw));
 
-    if is_read {
+    let result = if is_read {
         let rows = sqlx::raw_sql(&sql)
             .fetch_all(&exec_pool)
             .await
@@ -325,7 +338,38 @@ pub async fn execute_query(
             query_time_ms: elapsed,
             is_select: false,
         })
+    };
+
+    // Always close the temporary pool to avoid connection leaks
+    exec_pool.close().await;
+
+    result
+}
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+/// Strips leading SQL comments (block `/* ... */` and line `-- ...`) and
+/// whitespace so the real statement keyword can be detected.
+fn strip_leading_comments(sql: &str) -> &str {
+    let mut s = sql.trim_start();
+    loop {
+        if s.starts_with("--") {
+            // Line comment — skip to end of line
+            s = match s.find('\n') {
+                Some(pos) => s[pos + 1..].trim_start(),
+                None => "",
+            };
+        } else if s.starts_with("/*") {
+            // Block comment — skip to closing */
+            s = match s.find("*/") {
+                Some(pos) => s[pos + 2..].trim_start(),
+                None => "",
+            };
+        } else {
+            break;
+        }
     }
+    s
 }
 
 // ─── ping_db ─────────────────────────────────────────────────────────────────

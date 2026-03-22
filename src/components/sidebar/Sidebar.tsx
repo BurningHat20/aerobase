@@ -45,37 +45,59 @@ export default function Sidebar({
     )
   );
 
-  const toggleDb = useCallback(
-    async (db: string) => {
-      const node = nodes[db];
-      if (!node) return;
-      if (node.expanded) {
-        setNodes((p) => ({ ...p, [db]: { ...p[db], expanded: false } }));
-        return;
-      }
-      if (node.loaded) {
-        setNodes((p) => ({ ...p, [db]: { ...p[db], expanded: true } }));
-        return;
-      }
+  const fetchTables = useCallback(async (db: string) => {
+    setNodes((p) => ({
+      ...p,
+      [db]: { ...p[db], expanded: true, loading: true },
+    }));
+    try {
+      const tables = await invoke<string[]>("get_tables", { dbName: db });
       setNodes((p) => ({
         ...p,
-        [db]: { ...p[db], expanded: true, loading: true },
+        [db]: { ...p[db], tables, loading: false, loaded: true },
       }));
-      try {
-        const tables = await invoke<string[]>("get_tables", { dbName: db });
-        setNodes((p) => ({
-          ...p,
-          [db]: { ...p[db], tables, loading: false, loaded: true },
-        }));
-      } catch {
-        setNodes((p) => ({
-          ...p,
-          [db]: { ...p[db], expanded: false, loading: false },
-        }));
-      }
+    } catch {
+      setNodes((p) => ({
+        ...p,
+        [db]: { ...p[db], expanded: false, loading: false },
+      }));
+    }
+  }, []);
+
+  const toggleDb = useCallback(
+    (db: string) => {
+      setNodes((prev) => {
+        const node = prev[db];
+        if (!node) return prev;
+        if (node.expanded) {
+          return { ...prev, [db]: { ...node, expanded: false } };
+        }
+        if (node.loaded) {
+          return { ...prev, [db]: { ...node, expanded: true } };
+        }
+        // Need to fetch — trigger async load outside setState
+        fetchTables(db);
+        return prev;
+      });
     },
-    [nodes]
+    [fetchTables]
   );
+
+  const refreshAll = useCallback(() => {
+    // Reset all nodes and re-fetch expanded ones
+    const expandedDbs = Object.entries(nodes)
+      .filter(([, n]) => n.expanded)
+      .map(([db]) => db);
+    setNodes(
+      Object.fromEntries(
+        databases.map((db) => [
+          db,
+          { tables: [], expanded: false, loading: false, loaded: false },
+        ])
+      )
+    );
+    expandedDbs.forEach(fetchTables);
+  }, [nodes, databases, fetchTables]);
 
   const q = search.toLowerCase().trim();
 
@@ -125,6 +147,7 @@ export default function Sidebar({
           {q ? `${visible.length}/${databases.length} results` : "Databases"}
         </span>
         <button
+          onClick={refreshAll}
           className="p-0.5 text-muted-foreground/35 hover:text-muted-foreground transition-colors rounded"
           title="Refresh"
         >

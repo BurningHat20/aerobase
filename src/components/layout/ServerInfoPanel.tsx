@@ -100,10 +100,14 @@ export default function ServerInfoPanel({
             : "opacity-0 pointer-events-none",
         ].join(" ")}
         onClick={onClose}
+        aria-hidden="true"
       />
 
       {/* Panel */}
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Server information"
         className={[
           "fixed top-9 right-0 bottom-0 z-50 w-72 bg-card border-l border-border shadow-2xl flex flex-col",
           "transition-transform duration-200 ease-in-out",

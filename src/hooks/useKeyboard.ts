@@ -13,7 +13,7 @@ export function useKeyboard(
   opts: { allowInInput?: boolean } = {}
 ) {
   useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
+    const onKeyDown = (e: KeyboardEvent) => {
       // Don't steal typing shortcuts from text inputs unless explicitly allowed
       if (!opts.allowInInput) {
         const tag = (e.target as HTMLElement)?.tagName?.toLowerCase();
@@ -27,14 +27,14 @@ export function useKeyboard(
       parts.push(e.key.toLowerCase());
 
       const combo = parts.join("+");
-      const handler = shortcuts[combo];
-      if (handler) {
+      const fn = shortcuts[combo];
+      if (fn) {
         e.preventDefault();
-        handler(e);
+        fn(e);
       }
     };
 
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
   }, [shortcuts, opts.allowInInput]);
 }

@@ -112,12 +112,15 @@ export default function DataGrid({ db, table }: Props) {
     fetchData(0, pageSize, col, dir);
   };
 
-  const visibleRows = data
-    ? filter.trim()
-      ? data.rows.filter((r) =>
-          r.some((c) => c.toLowerCase().includes(filter.toLowerCase()))
-        )
-      : data.rows
+  const filterLower = filter.trim().toLowerCase();
+  const visibleRows: { row: string[]; origIdx: number }[] = data
+    ? filterLower
+      ? data.rows
+          .map((row, idx) => ({ row, origIdx: idx }))
+          .filter(({ row }) =>
+            row.some((c) => c.toLowerCase().includes(filterLower))
+          )
+      : data.rows.map((row, idx) => ({ row, origIdx: idx }))
     : [];
 
   // ── Loading skeleton ─────────────────────────────────────────────────────
@@ -170,7 +173,7 @@ export default function DataGrid({ db, table }: Props) {
           />
         </div>
 
-        {filter && (
+        {filter && filterLower && (
           <Badge
             variant="secondary"
             className="h-5 text-[10px] px-1.5 font-mono shrink-0"
@@ -287,8 +290,8 @@ export default function DataGrid({ db, table }: Props) {
               </tr>
             </thead>
             <tbody>
-              {visibleRows.map((row, ri) => (
-                <ContextMenu key={ri}>
+              {visibleRows.map(({ row, origIdx }, ri) => (
+                <ContextMenu key={origIdx}>
                   <ContextMenuTrigger asChild>
                     <tr
                       className={`border-b border-border/30 hover:bg-accent/25 transition-colors ${
@@ -296,7 +299,7 @@ export default function DataGrid({ db, table }: Props) {
                       }`}
                     >
                       <td className="w-10 px-2 py-2 text-right font-mono text-[10px] text-muted-foreground/25 border-r border-border/20 select-none tabular-nums">
-                        {from + ri}
+                        {from + origIdx}
                       </td>
                       {row.map((cell, ci) => (
                         <td
@@ -354,7 +357,7 @@ export default function DataGrid({ db, table }: Props) {
                     <ContextMenuItem
                       onClick={() =>
                         copyToClipboard(
-                          `${data.columns.join(",")}\n${row.join(",")}`,
+                          toCSV(data.columns, [row]),
                           "Copied as CSV"
                         )
                       }
@@ -375,7 +378,7 @@ export default function DataGrid({ db, table }: Props) {
                 </ContextMenu>
               ))}
 
-              {visibleRows.length === 0 && filter && (
+              {visibleRows.length === 0 && filterLower && (
                 <tr>
                   <td
                     colSpan={data.columns.length + 1}
