@@ -1,15 +1,14 @@
 import {
   RiCodeLine,
-  RiDatabase2Line,
   RiLogoutCircleRLine,
   RiMoonLine,
+  RiSearchLine,
   RiServerLine,
-  RiSettings2Line,
-  RiSignalWifiFill,
   RiSunLine,
 } from "@remixicon/react";
 
 import { Button } from "@/components/ui/button";
+import { Kbd, KbdGroup } from "@/components/ui/kbd";
 import { Separator } from "@/components/ui/separator";
 import {
   Tooltip,
@@ -25,6 +24,7 @@ interface Props {
   onDisconnect: () => void;
   onNewQuery: () => void;
   onOpenServerInfo: () => void;
+  onOpenCommandPalette: () => void;
   theme: Theme;
   toggleTheme: () => void;
 }
@@ -34,58 +34,67 @@ export default function TopBar({
   onDisconnect,
   onNewQuery,
   onOpenServerInfo,
+  onOpenCommandPalette,
   theme,
   toggleTheme,
 }: Props) {
   return (
-    <TooltipProvider delayDuration={600}>
-      <header className="h-10 shrink-0 border-b border-border bg-card flex items-center px-3 gap-3">
-        {/* Brand */}
-        <div className="flex items-center gap-2 shrink-0">
-          <div className="size-6 rounded-md bg-primary flex items-center justify-center shadow-sm">
-            <RiDatabase2Line className="size-3.5 text-primary-foreground" />
-          </div>
-          <span className="text-sm font-semibold tracking-tight text-foreground">
-            AeroBase
+    <TooltipProvider delayDuration={400}>
+      <header className="h-12 shrink-0 border-b border-border bg-card flex items-center px-4 gap-3 select-none">
+        {/* Connection status */}
+        <div className="flex items-center gap-2.5 min-w-0">
+          <span className="relative flex size-2 shrink-0">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-60" />
+            <span className="relative inline-flex rounded-full size-2 bg-emerald-500" />
+          </span>
+          <span className="text-sm text-muted-foreground font-mono truncate">
+            {connectionInfo.user}
+            <span className="text-foreground/20">@</span>
+            {connectionInfo.host}
+            <span className="text-foreground/20">:</span>
+            {connectionInfo.port}
           </span>
         </div>
+
+        <div className="flex-1" />
+
+        {/* Command palette */}
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-8 px-3 text-xs text-muted-foreground gap-2 bg-transparent hover:bg-accent"
+          onClick={onOpenCommandPalette}
+        >
+          <RiSearchLine className="size-3.5" />
+          <span className="hidden sm:inline">Search</span>
+          <KbdGroup className="hidden sm:inline-flex ml-0.5">
+            <Kbd>Ctrl</Kbd>
+            <Kbd>K</Kbd>
+          </KbdGroup>
+        </Button>
 
         <Separator orientation="vertical" className="h-4" />
 
-        {/* Connection badge */}
-        <div className="flex items-center gap-1.5 min-w-0">
-          <RiServerLine className="size-3.5 text-muted-foreground shrink-0" />
-          <span className="text-xs text-muted-foreground font-mono truncate">
-            {connectionInfo.user}@{connectionInfo.host}:{connectionInfo.port}
-          </span>
-          <span className="flex items-center gap-1 text-[10px] text-emerald-500 font-medium shrink-0 ml-1">
-            <RiSignalWifiFill className="size-2.5" />
-            Live
-          </span>
-        </div>
-
-        {/* Spacer */}
-        <div className="flex-1" />
-
         {/* Actions */}
-        <div className="flex items-center gap-0.5 shrink-0">
+        <div className="flex items-center gap-1 shrink-0">
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-7 px-2.5 text-xs text-muted-foreground hover:text-foreground gap-1.5 rounded-lg"
+                className="h-8 px-2.5 text-xs text-muted-foreground hover:text-foreground gap-2"
                 onClick={onNewQuery}
               >
-                <RiCodeLine className="size-3.5" />
-                <span className="hidden sm:inline">SQL Editor</span>
+                <RiCodeLine className="size-4" />
+                <span className="hidden sm:inline">SQL</span>
               </Button>
             </TooltipTrigger>
             <TooltipContent side="bottom" className="text-xs">
-              New SQL editor{" "}
-              <kbd className="ml-1 text-[10px] px-1 py-px rounded bg-muted font-mono">
-                Ctrl+T
-              </kbd>
+              New SQL Editor{" "}
+              <KbdGroup className="ml-1">
+                <Kbd>Ctrl</Kbd>
+                <Kbd>T</Kbd>
+              </KbdGroup>
             </TooltipContent>
           </Tooltip>
 
@@ -94,10 +103,10 @@ export default function TopBar({
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground rounded-lg"
+                className="size-8 p-0 text-muted-foreground hover:text-foreground"
                 onClick={onOpenServerInfo}
               >
-                <RiSettings2Line className="size-3.5" />
+                <RiServerLine className="size-4" />
               </Button>
             </TooltipTrigger>
             <TooltipContent side="bottom" className="text-xs">
@@ -110,13 +119,13 @@ export default function TopBar({
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground rounded-lg"
+                className="size-8 p-0 text-muted-foreground hover:text-foreground"
                 onClick={toggleTheme}
               >
                 {theme === "dark" ? (
-                  <RiSunLine className="size-3.5" />
+                  <RiSunLine className="size-4" />
                 ) : (
-                  <RiMoonLine className="size-3.5" />
+                  <RiMoonLine className="size-4" />
                 )}
               </Button>
             </TooltipTrigger>
@@ -125,22 +134,21 @@ export default function TopBar({
             </TooltipContent>
           </Tooltip>
 
-          <Separator orientation="vertical" className="h-4 mx-1" />
+          <Separator orientation="vertical" className="h-4 mx-0.5" />
 
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-7 px-2.5 text-xs text-muted-foreground hover:text-destructive gap-1.5 rounded-lg"
+                className="size-8 p-0 text-muted-foreground hover:text-destructive"
                 onClick={onDisconnect}
               >
-                <RiLogoutCircleRLine className="size-3.5" />
-                <span className="hidden sm:inline">Disconnect</span>
+                <RiLogoutCircleRLine className="size-4" />
               </Button>
             </TooltipTrigger>
             <TooltipContent side="bottom" className="text-xs">
-              Close connection
+              Disconnect
             </TooltipContent>
           </Tooltip>
         </div>

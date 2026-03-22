@@ -1,4 +1,4 @@
-import { RiCloseLine, RiCodeLine, RiTableLine } from "@remixicon/react";
+import { RiAddLine, RiCloseLine, RiCodeLine, RiTableLine } from "@remixicon/react";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import type { OpenTab } from "@/types";
 
@@ -7,31 +7,22 @@ interface Props {
   activeTabId: string | null;
   onActivate: (id: string) => void;
   onClose: (id: string) => void;
+  onNewQuery?: () => void;
 }
 
-/**
- * Browser-style tab strip.
- *
- * Visual contract:
- * - The strip itself has bg-muted/30 + a bottom border.
- * - Active tab: bg-background, has left/top/right border, bottom border is
- *   REMOVED via negative margin-bottom + z-index — the tab appears "open"
- *   and connected to the content below it.
- * - Inactive tabs: no background, no border, subtle hover.
- */
 export default function TabStrip({
   tabs,
   activeTabId,
   onActivate,
   onClose,
+  onNewQuery,
 }: Props) {
   if (tabs.length === 0) return null;
 
   return (
-    /* The -mb-px trick: push the strip's bottom border behind the active tab */
-    <div className="shrink-0 border-b border-border bg-muted/20">
+    <div className="shrink-0 bg-card/50 border-b border-border">
       <ScrollArea className="w-full" type="hover">
-        <div className="flex items-end h-9 px-3 gap-0.5">
+        <div className="flex items-center h-10 px-2 gap-1">
           {tabs.map((tab) => {
             const active = tab.id === activeTabId;
             const isTable = tab.type === "table";
@@ -40,39 +31,36 @@ export default function TabStrip({
               <button
                 key={tab.id}
                 onClick={() => onActivate(tab.id)}
+                onMouseDown={(e) => {
+                  if (e.button === 1) {
+                    e.preventDefault();
+                    onClose(tab.id);
+                  }
+                }}
                 className={[
-                  // shared
-                  "relative flex items-center gap-1.5 px-3 h-8 text-xs font-medium",
-                  "rounded-t-lg transition-all select-none shrink-0 max-w-48 group",
-                  // active: sits on top of the border line below
+                  "relative flex items-center gap-2 px-3 h-8 text-xs font-medium",
+                  "rounded-md transition-colors select-none shrink-0 max-w-48 group",
                   active
-                    ? "bg-background text-foreground border border-border border-b-background z-10 -mb-px shadow-none"
-                    : "text-muted-foreground hover:text-foreground hover:bg-background/50",
+                    ? "bg-background text-foreground shadow-sm shadow-black/5"
+                    : "text-muted-foreground hover:text-foreground hover:bg-accent/50",
                 ].join(" ")}
               >
-                {/* Tab icon */}
                 {isTable ? (
                   <RiTableLine
-                    className={`size-3 shrink-0 transition-colors ${
-                      active
-                        ? "text-primary"
-                        : "text-muted-foreground/50 group-hover:text-muted-foreground"
+                    className={`size-3.5 shrink-0 ${
+                      active ? "text-foreground" : "text-muted-foreground/40"
                     }`}
                   />
                 ) : (
                   <RiCodeLine
-                    className={`size-3 shrink-0 transition-colors ${
-                      active
-                        ? "text-amber-500"
-                        : "text-muted-foreground/50 group-hover:text-muted-foreground"
+                    className={`size-3.5 shrink-0 ${
+                      active ? "text-foreground" : "text-muted-foreground/40"
                     }`}
                   />
                 )}
 
-                {/* Label */}
                 <span className="truncate leading-none">{tab.label}</span>
 
-                {/* Close */}
                 <span
                   role="button"
                   tabIndex={-1}
@@ -82,18 +70,28 @@ export default function TabStrip({
                   }}
                   onKeyDown={(e) => e.key === "Enter" && onClose(tab.id)}
                   className={[
-                    "shrink-0 size-4 flex items-center justify-center rounded transition-all ml-0.5",
-                    "hover:bg-destructive/15 hover:text-destructive",
+                    "shrink-0 size-5 flex items-center justify-center rounded-sm transition-all ml-0.5",
+                    "hover:bg-foreground/10",
                     active
-                      ? "text-muted-foreground/60"
+                      ? "text-muted-foreground"
                       : "opacity-0 group-hover:opacity-100 text-muted-foreground/40",
                   ].join(" ")}
                 >
-                  <RiCloseLine className="size-3" />
+                  <RiCloseLine className="size-3.5" />
                 </span>
               </button>
             );
           })}
+
+          {onNewQuery && (
+            <button
+              onClick={onNewQuery}
+              className="shrink-0 size-8 flex items-center justify-center rounded-md text-muted-foreground/30 hover:text-muted-foreground hover:bg-accent/50 transition-colors"
+              title="New SQL Editor (Ctrl+T)"
+            >
+              <RiAddLine className="size-4" />
+            </button>
+          )}
         </div>
         <ScrollBar orientation="horizontal" className="h-1" />
       </ScrollArea>

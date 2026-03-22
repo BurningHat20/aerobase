@@ -1,13 +1,13 @@
 import { Toaster as Sonner } from "@/components/ui/sonner";
 
 /**
- * Global toast container — mount once in App.tsx.
- * Forces dark theme to match AeroBase's dark-first design.
+ * Global toast container -- mount once in App.tsx.
+ * Uses "system" theme to auto-follow the app's light/dark class.
  */
 export default function Toaster() {
   return (
     <Sonner
-      theme="dark"
+      theme="system"
       position="bottom-right"
       gap={6}
       toastOptions={{
@@ -16,7 +16,7 @@ export default function Toaster() {
             "bg-card border border-border text-foreground text-xs shadow-lg rounded-lg",
           title: "text-xs font-medium",
           description: "text-[11px] text-muted-foreground",
-          success: "border-emerald-500/30",
+          success: "border-success/30",
           error: "border-destructive/30",
         },
       }}

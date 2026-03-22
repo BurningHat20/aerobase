@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import {
-  RiCloseLine,
   RiDatabase2Line,
   RiGlobalLine,
   RiLoader4Line,
@@ -10,6 +9,12 @@ import {
   RiUserLine,
 } from "@remixicon/react";
 
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { ConnectionInfo, ServerInfo } from "@/types";
 
@@ -44,45 +49,35 @@ export default function ServerInfoPanel({
       .finally(() => setLoading(false));
   }, [open]);
 
-  // Close on Escape
-  useEffect(() => {
-    if (!open) return;
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  }, [open, onClose]);
-
   const rows: InfoRow[] = info
     ? [
         {
-          icon: <RiServerLine className="size-3.5 text-primary/70" />,
+          icon: <RiServerLine className="size-3.5 text-primary" />,
           label: "Version",
           value: info.version,
         },
         {
-          icon: <RiGlobalLine className="size-3.5 text-sky-400/70" />,
+          icon: <RiGlobalLine className="size-3.5 text-info" />,
           label: "Hostname",
           value: info.hostname,
         },
         {
-          icon: <RiUserLine className="size-3.5 text-emerald-400/70" />,
+          icon: <RiUserLine className="size-3.5 text-success" />,
           label: "Connected as",
           value: info.current_user,
         },
         {
-          icon: <RiDatabase2Line className="size-3.5 text-amber-400/70" />,
+          icon: <RiDatabase2Line className="size-3.5 text-warning" />,
           label: "Max connections",
           value: info.max_connections.toLocaleString(),
         },
         {
-          icon: <RiShieldLine className="size-3.5 text-purple-400/70" />,
+          icon: <RiShieldLine className="size-3.5 text-chart-4" />,
           label: "Charset",
           value: info.charset,
         },
         {
-          icon: <RiShieldLine className="size-3.5 text-purple-400/70" />,
+          icon: <RiShieldLine className="size-3.5 text-chart-4" />,
           label: "Collation",
           value: info.collation,
         },
@@ -90,62 +85,31 @@ export default function ServerInfoPanel({
     : [];
 
   return (
-    <>
-      {/* Backdrop */}
-      <div
-        className={[
-          "fixed inset-0 z-40 bg-black/30 backdrop-blur-[1px] transition-opacity duration-200",
-          open
-            ? "opacity-100 pointer-events-auto"
-            : "opacity-0 pointer-events-none",
-        ].join(" ")}
-        onClick={onClose}
-        aria-hidden="true"
-      />
-
-      {/* Panel */}
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-label="Server information"
-        className={[
-          "fixed top-9 right-0 bottom-0 z-50 w-72 bg-card border-l border-border shadow-2xl flex flex-col",
-          "transition-transform duration-200 ease-in-out",
-          open ? "translate-x-0" : "translate-x-full",
-        ].join(" ")}
-      >
-        {/* Header */}
-        <div className="shrink-0 flex items-center justify-between px-4 py-3 border-b border-border">
-          <div className="flex items-center gap-2">
+    <Sheet open={open} onOpenChange={(v) => !v && onClose()}>
+      <SheetContent side="right" className="w-72 p-0 flex flex-col">
+        <SheetHeader className="px-4 py-3 border-b border-border">
+          <SheetTitle className="flex items-center gap-2 text-sm">
             <RiServerLine className="size-4 text-primary" />
-            <span className="text-sm font-semibold text-foreground">
-              Server Info
-            </span>
-          </div>
-          <button
-            onClick={onClose}
-            className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
-          >
-            <RiCloseLine className="size-4" />
-          </button>
-        </div>
+            Server Info
+          </SheetTitle>
+        </SheetHeader>
 
         {/* Connection pill */}
         <div className="shrink-0 mx-3 mt-3 px-3 py-2 rounded-lg bg-muted/40 border border-border/50">
-          <p className="text-[10px] text-muted-foreground/60 uppercase tracking-wider font-semibold mb-1">
-            Active connection
+          <p className="text-[10px] text-muted-foreground/50 uppercase tracking-wider font-semibold mb-0.5">
+            Connection
           </p>
-          <p className="text-xs font-mono text-foreground/80">
+          <p className="text-[11px] font-mono text-foreground/80">
             {connectionInfo.user}@{connectionInfo.host}:{connectionInfo.port}
           </p>
         </div>
 
         {/* Content */}
-        <ScrollArea className="flex-1 mt-3">
+        <ScrollArea className="flex-1 mt-2">
           {loading && (
             <div className="flex items-center justify-center gap-2 py-8 text-xs text-muted-foreground">
               <RiLoader4Line className="size-4 animate-spin" />
-              Loading…
+              Loading...
             </div>
           )}
 
@@ -156,7 +120,7 @@ export default function ServerInfoPanel({
           )}
 
           {!loading && !error && info && (
-            <div className="px-3 pb-4 space-y-1">
+            <div className="px-3 pb-4 space-y-0.5">
               {rows.map((row) => (
                 <div
                   key={row.label}
@@ -164,10 +128,10 @@ export default function ServerInfoPanel({
                 >
                   <div className="shrink-0">{row.icon}</div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-[10px] text-muted-foreground/50 uppercase tracking-wider font-semibold leading-none mb-0.5">
+                    <p className="text-[10px] text-muted-foreground/40 uppercase tracking-wider font-semibold leading-none mb-1">
                       {row.label}
                     </p>
-                    <p className="text-xs text-foreground/80 font-mono truncate">
+                    <p className="text-[11px] text-foreground/80 font-mono truncate">
                       {row.value}
                     </p>
                   </div>
@@ -176,7 +140,7 @@ export default function ServerInfoPanel({
             </div>
           )}
         </ScrollArea>
-      </div>
-    </>
+      </SheetContent>
+    </Sheet>
   );
 }

@@ -5,6 +5,7 @@ import TabStrip from "@/components/layout/TabStrip";
 import WelcomePane from "@/components/layout/WelcomePane";
 import ResizableSidebar from "@/components/layout/ResizableSidebar";
 import ServerInfoPanel from "@/components/layout/ServerInfoPanel";
+import CommandPalette from "@/components/layout/CommandPalette";
 import Sidebar from "@/components/sidebar/Sidebar";
 import TableView from "@/components/table-view/TableView";
 import SqlEditor from "@/components/table-view/SqlEditor";
@@ -37,10 +38,17 @@ export default function DashboardPage({
   } = useTabManager();
 
   const [serverPanelOpen, setServerPanelOpen] = useState(false);
+  const [commandOpen, setCommandOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [loadedTables, setLoadedTables] = useState<Record<string, string[]>>({});
 
   const handleNewQuery = useCallback(() => {
     openQueryTab(databases[0] ?? "");
   }, [databases, openQueryTab]);
+
+  const handleTablesLoaded = useCallback((db: string, tables: string[]) => {
+    setLoadedTables((prev) => ({ ...prev, [db]: tables }));
+  }, []);
 
   const shortcuts = useMemo(
     () => ({
@@ -48,6 +56,8 @@ export default function DashboardPage({
       "ctrl+w": () => {
         if (activeTabId) closeTab(activeTabId);
       },
+      "ctrl+k": () => setCommandOpen(true),
+      "ctrl+b": () => setSidebarCollapsed((v) => !v),
     }),
     [handleNewQuery, activeTabId, closeTab]
   );
@@ -63,17 +73,22 @@ export default function DashboardPage({
         onDisconnect={onDisconnect}
         onNewQuery={handleNewQuery}
         onOpenServerInfo={() => setServerPanelOpen(true)}
+        onOpenCommandPalette={() => setCommandOpen(true)}
         theme={theme}
         toggleTheme={toggleTheme}
       />
 
       <div className="flex flex-1 overflow-hidden">
-        <ResizableSidebar>
+        <ResizableSidebar
+          collapsed={sidebarCollapsed}
+          onToggleCollapse={() => setSidebarCollapsed((v) => !v)}
+        >
           <Sidebar
             connectionInfo={connectionInfo}
             databases={databases}
             onOpenTable={openTableTab}
             onOpenQuery={openQueryTab}
+            onTablesLoaded={handleTablesLoaded}
           />
         </ResizableSidebar>
 
@@ -83,6 +98,7 @@ export default function DashboardPage({
             activeTabId={activeTabId}
             onActivate={setActiveTabId}
             onClose={closeTab}
+            onNewQuery={handleNewQuery}
           />
 
           <div className="flex-1 overflow-hidden">
@@ -109,6 +125,20 @@ export default function DashboardPage({
         open={serverPanelOpen}
         onClose={() => setServerPanelOpen(false)}
         connectionInfo={connectionInfo}
+      />
+
+      <CommandPalette
+        open={commandOpen}
+        onOpenChange={setCommandOpen}
+        databases={databases}
+        tables={loadedTables}
+        connectionInfo={connectionInfo}
+        onOpenTable={openTableTab}
+        onOpenQuery={openQueryTab}
+        onOpenServerInfo={() => setServerPanelOpen(true)}
+        onDisconnect={onDisconnect}
+        theme={theme}
+        toggleTheme={toggleTheme}
       />
     </div>
   );

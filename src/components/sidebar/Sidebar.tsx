@@ -11,7 +11,6 @@ import {
   RiTableLine,
 } from "@remixicon/react";
 
-import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { ConnectionInfo } from "@/types";
 
@@ -27,6 +26,7 @@ interface Props {
   databases: string[];
   onOpenTable: (db: string, table: string) => void;
   onOpenQuery: (db: string) => void;
+  onTablesLoaded?: (db: string, tables: string[]) => void;
 }
 
 export default function Sidebar({
@@ -34,6 +34,7 @@ export default function Sidebar({
   databases,
   onOpenTable,
   onOpenQuery,
+  onTablesLoaded,
 }: Props) {
   const [search, setSearch] = useState("");
   const [nodes, setNodes] = useState<Record<string, DbNode>>(() =>
@@ -56,13 +57,14 @@ export default function Sidebar({
         ...p,
         [db]: { ...p[db], tables, loading: false, loaded: true },
       }));
+      onTablesLoaded?.(db, tables);
     } catch {
       setNodes((p) => ({
         ...p,
         [db]: { ...p[db], expanded: false, loading: false },
       }));
     }
-  }, []);
+  }, [onTablesLoaded]);
 
   const toggleDb = useCallback(
     (db: string) => {
@@ -75,7 +77,6 @@ export default function Sidebar({
         if (node.loaded) {
           return { ...prev, [db]: { ...node, expanded: true } };
         }
-        // Need to fetch — trigger async load outside setState
         fetchTables(db);
         return prev;
       });
@@ -84,7 +85,6 @@ export default function Sidebar({
   );
 
   const refreshAll = useCallback(() => {
-    // Reset all nodes and re-fetch expanded ones
     const expandedDbs = Object.entries(nodes)
       .filter(([, n]) => n.expanded)
       .map(([db]) => db);
@@ -110,57 +110,41 @@ export default function Sidebar({
   }, [q, databases, nodes]);
 
   return (
-    <div className="h-full flex flex-col bg-sidebar">
-      {/* Server info header */}
-      <div className="px-3 py-3 border-b border-sidebar-border shrink-0">
-        <div className="flex items-center gap-2">
-          <div className="size-7 rounded-lg bg-primary/15 flex items-center justify-center shrink-0">
-            <RiDatabase2Line className="size-3.5 text-primary" />
-          </div>
-          <div className="min-w-0">
-            <p className="text-xs font-semibold text-sidebar-foreground truncate leading-tight">
-              {connectionInfo.host}
-            </p>
-            <p className="text-[10px] text-muted-foreground font-mono">
-              :{connectionInfo.port} · {databases.length} databases
-            </p>
-          </div>
-        </div>
-      </div>
-
+    <div className="h-full flex flex-col bg-sidebar select-none">
       {/* Search */}
-      <div className="px-2.5 py-2 border-b border-sidebar-border shrink-0">
+      <div className="px-3 py-3 shrink-0">
         <div className="relative">
-          <RiSearchLine className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3 text-muted-foreground pointer-events-none" />
-          <Input
-            placeholder="Search databases & tables…"
+          <RiSearchLine className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground/40 pointer-events-none" />
+          <input
+            type="text"
+            placeholder="Search..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="h-7 pl-7 text-xs bg-background/50 border-border/60 rounded-lg placeholder:text-muted-foreground/50"
+            className="w-full h-8 pl-8 pr-3 text-xs bg-transparent border border-border rounded-md text-foreground placeholder:text-muted-foreground/30 focus:outline-none focus:border-foreground/20 transition-colors"
           />
         </div>
       </div>
 
       {/* Label */}
-      <div className="flex items-center justify-between px-3 pt-2.5 pb-1 shrink-0">
-        <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">
-          {q ? `${visible.length}/${databases.length} results` : "Databases"}
+      <div className="flex items-center justify-between px-4 pb-1.5 shrink-0">
+        <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/40">
+          {q ? `${visible.length} result${visible.length !== 1 ? "s" : ""}` : `Databases`}
         </span>
         <button
           onClick={refreshAll}
-          className="p-0.5 text-muted-foreground/35 hover:text-muted-foreground transition-colors rounded"
-          title="Refresh"
+          className="p-1 text-muted-foreground/25 hover:text-muted-foreground transition-colors rounded"
+          title="Refresh all"
         >
-          <RiRefreshLine className="size-3" />
+          <RiRefreshLine className="size-3.5" />
         </button>
       </div>
 
       {/* Tree */}
       <ScrollArea className="flex-1">
-        <div className="px-2 pb-4 space-y-px">
+        <div className="px-2 pb-4 space-y-0.5">
           {visible.length === 0 && (
-            <p className="text-center text-xs text-muted-foreground/40 py-8">
-              No results for "{search}"
+            <p className="text-center text-xs text-muted-foreground/25 py-8">
+              No matches
             </p>
           )}
 
@@ -173,57 +157,54 @@ export default function Sidebar({
 
             return (
               <div key={db}>
-                {/* DB row */}
                 <button
                   onClick={() => toggleDb(db)}
-                  className="w-full flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-xs transition-colors hover:bg-sidebar-accent group text-sidebar-foreground"
+                  className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md text-xs transition-colors hover:bg-sidebar-accent group text-sidebar-foreground"
                 >
-                  <span className="size-3.5 flex items-center justify-center shrink-0">
+                  <span className="size-4 flex items-center justify-center shrink-0">
                     {node.loading ? (
                       <RiLoader3Line className="size-3.5 text-muted-foreground animate-spin" />
                     ) : node.expanded ? (
-                      <RiArrowDownSLine className="size-3.5 text-muted-foreground" />
+                      <RiArrowDownSLine className="size-4 text-muted-foreground/50" />
                     ) : (
-                      <RiArrowRightSLine className="size-3.5 text-muted-foreground" />
+                      <RiArrowRightSLine className="size-4 text-muted-foreground/50" />
                     )}
                   </span>
-                  <RiDatabase2Line className="size-3.5 text-primary/60 shrink-0 group-hover:text-primary transition-colors" />
+                  <RiDatabase2Line className="size-3.5 text-muted-foreground/40 shrink-0 group-hover:text-foreground/60 transition-colors" />
                   <span className="flex-1 text-left truncate font-medium leading-none">
                     {db}
                   </span>
                   {node.loaded && (
-                    <span className="text-[10px] text-muted-foreground/40 tabular-nums shrink-0">
+                    <span className="text-[11px] text-muted-foreground/25 tabular-nums shrink-0">
                       {node.tables.length}
                     </span>
                   )}
                 </button>
 
-                {/* Tables sub-list */}
                 {node.expanded && !node.loading && (
-                  <div className="ml-4 mt-px pl-2 border-l border-border/40">
+                  <div className="ml-5 pl-3 border-l border-border">
                     {tableList.map((tbl) => (
                       <button
                         key={tbl}
                         onClick={() => onOpenTable(db, tbl)}
-                        className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-[11px] text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground transition-colors group"
+                        className="w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-xs text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground transition-colors group"
                       >
-                        <RiTableLine className="size-3 text-muted-foreground/40 group-hover:text-primary transition-colors shrink-0" />
+                        <RiTableLine className="size-3.5 text-muted-foreground/25 group-hover:text-foreground/50 transition-colors shrink-0" />
                         <span className="truncate font-medium">{tbl}</span>
                       </button>
                     ))}
 
                     {tableList.length === 0 && node.loaded && (
-                      <p className="px-2 py-1.5 text-[11px] text-muted-foreground/35 italic">
-                        {q ? "No matches" : "Empty database"}
+                      <p className="px-2.5 py-1.5 text-[11px] text-muted-foreground/20 italic">
+                        {q ? "No matches" : "Empty"}
                       </p>
                     )}
 
-                    {/* New query shortcut */}
                     <button
                       onClick={() => onOpenQuery(db)}
-                      className="w-full flex items-center gap-2 px-2 py-1.5 mt-1 rounded-lg text-[11px] text-muted-foreground/40 hover:text-primary hover:bg-sidebar-accent transition-all border border-dashed border-border/30 hover:border-primary/30"
+                      className="w-full flex items-center gap-2.5 px-2.5 py-1.5 mt-0.5 rounded-md text-[11px] text-muted-foreground/25 hover:text-foreground/60 hover:bg-sidebar-accent transition-all"
                     >
-                      <RiCodeLine className="size-3 shrink-0" />
+                      <RiCodeLine className="size-3.5 shrink-0" />
                       New query
                     </button>
                   </div>
@@ -233,6 +214,13 @@ export default function Sidebar({
           })}
         </div>
       </ScrollArea>
+
+      {/* Footer */}
+      <div className="shrink-0 px-4 py-2.5 border-t border-sidebar-border">
+        <p className="text-[11px] text-muted-foreground/25 font-mono truncate">
+          {connectionInfo.user}@{connectionInfo.host}:{connectionInfo.port}
+        </p>
+      </div>
     </div>
   );
 }
