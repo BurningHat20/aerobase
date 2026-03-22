@@ -2,9 +2,11 @@ import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { RiAlertLine, RiFileCopyLine } from "@remixicon/react";
 
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { copyToClipboard } from "@/hooks/useClipboard";
+import { useTheme } from "@/hooks/useTheme";
+import CodeEditor from "@/components/editor/CodeEditor";
 
 interface Props {
   db: string;
@@ -15,6 +17,7 @@ export default function DdlView({ db, table }: Props) {
   const [ddl, setDdl] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const { theme } = useTheme();
 
   useEffect(() => {
     setLoading(true);
@@ -33,7 +36,7 @@ export default function DdlView({ db, table }: Props) {
         {Array.from({ length: 8 }).map((_, i) => (
           <Skeleton
             key={i}
-            className="h-4"
+            className="h-4 rounded-sm"
             style={{
               width: `${70 + Math.random() * 30}%`,
               opacity: 1 - i * 0.1,
@@ -54,116 +57,28 @@ export default function DdlView({ db, table }: Props) {
   }
 
   return (
-    <div className="h-full flex flex-col overflow-hidden">
-      {/* Toolbar */}
-      <div className="shrink-0 flex items-center justify-between px-3 py-1.5 border-b border-border bg-card/30">
-        <span className="text-[11px] text-muted-foreground">
-          <span className="font-mono text-foreground/60">{db}</span>
-          <span className="text-muted-foreground/40 mx-1">/</span>
-          <span className="font-mono text-foreground/60">{table}</span>
-        </span>
-        <button
-          onClick={() => copyToClipboard(ddl, "DDL copied to clipboard")}
-          className="flex items-center gap-1.5 px-2 py-1 rounded text-[11px] text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+    <div className="h-full flex flex-col overflow-hidden relative">
+      {/* Floating copy button */}
+      <div className="absolute top-2 right-4 z-10">
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-6 px-2 text-[10px] gap-1 bg-card/80 backdrop-blur-sm border-border/40"
+          onClick={() => copyToClipboard(ddl, "DDL copied")}
         >
           <RiFileCopyLine className="size-3" />
           Copy
-        </button>
+        </Button>
       </div>
 
-      {/* DDL code block */}
-      <ScrollArea className="flex-1">
-        <pre className="p-4 text-[11px] leading-relaxed font-mono text-foreground/80 whitespace-pre-wrap break-words">
-          {/* Basic keyword highlighting via spans */}
-          {tokenise(ddl)}
-        </pre>
-      </ScrollArea>
+      {/* CodeMirror editor (read-only) */}
+      <div className="flex-1 overflow-hidden">
+        <CodeEditor
+          value={ddl}
+          readOnly
+          isDark={theme === "dark"}
+        />
+      </div>
     </div>
   );
-}
-
-// ── Lightweight SQL keyword colouring ─────────────────────────────────────────
-// No external parser — splits on word boundaries and colours known tokens.
-
-const KW = new Set([
-  "CREATE",
-  "TABLE",
-  "NOT",
-  "NULL",
-  "DEFAULT",
-  "AUTO_INCREMENT",
-  "PRIMARY",
-  "KEY",
-  "UNIQUE",
-  "INDEX",
-  "CONSTRAINT",
-  "FOREIGN",
-  "REFERENCES",
-  "ENGINE",
-  "CHARSET",
-  "COLLATE",
-  "COMMENT",
-  "IF",
-  "EXISTS",
-  "INT",
-  "BIGINT",
-  "VARCHAR",
-  "TEXT",
-  "TINYINT",
-  "SMALLINT",
-  "MEDIUMINT",
-  "FLOAT",
-  "DOUBLE",
-  "DECIMAL",
-  "DATE",
-  "DATETIME",
-  "TIMESTAMP",
-  "BOOLEAN",
-  "BLOB",
-  "JSON",
-  "ENUM",
-  "SET",
-  "ON",
-  "DELETE",
-  "UPDATE",
-  "CASCADE",
-  "RESTRICT",
-  "UNSIGNED",
-  "SIGNED",
-]);
-
-function tokenise(sql: string): React.ReactNode {
-  // Split preserving delimiters: backtick-quoted, single-quoted, numbers, words, rest
-  const tokens = sql.split(
-    /(`[^`]*`|'[^']*'|\b\d+\b|\b[A-Z_]+\b|[^`'\w]+)/gi
-  );
-  return tokens.map((tok, i) => {
-    if (!tok) return null;
-    const up = tok.toUpperCase();
-    if (KW.has(up))
-      return (
-        <span key={i} className="text-sky-400/90">
-          {tok}
-        </span>
-      );
-    if (/^`[^`]*`$/.test(tok))
-      return (
-        <span key={i} className="text-emerald-400/80">
-          {tok}
-        </span>
-      );
-    if (/^'[^']*'$/.test(tok))
-      return (
-        <span key={i} className="text-amber-400/80">
-          {tok}
-        </span>
-      );
-    if (/^\d+$/.test(tok))
-      return (
-        <span key={i} className="text-purple-400/80">
-          {tok}
-        </span>
-      );
-    return <span key={i}>{tok}</span>;
-  });
 }

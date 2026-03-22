@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import {
   RiAlertLine,
@@ -27,11 +27,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { Textarea } from "@/components/ui/textarea";
+import { Kbd, KbdGroup } from "@/components/ui/kbd";
 import { copyToClipboard, toCSV, toJSON } from "@/hooks/useClipboard";
+import { useTheme } from "@/hooks/useTheme";
+import CodeEditor from "@/components/editor/CodeEditor";
 import type { QueryResult, StatementResult } from "@/types";
 
-// ── Statement splitter (quote-aware) ─────────────────────────────────────────
+// Statement splitter (quote-aware)
 function splitStatements(sql: string): string[] {
   const stmts: string[] = [];
   let cur = "",
@@ -40,7 +42,6 @@ function splitStatements(sql: string): string[] {
     esc = false;
   for (const ch of sql) {
     if (esc) {
-      // Previous char was backslash — consume this char literally
       cur += ch;
       esc = false;
       continue;
@@ -73,7 +74,7 @@ function splitStatements(sql: string): string[] {
   return stmts;
 }
 
-// ── Result table ──────────────────────────────────────────────────────────────
+// Inline result table
 function ResultTable({
   result,
   label,
@@ -83,18 +84,18 @@ function ResultTable({
 }) {
   if (!result.is_select) {
     return (
-      <div className="flex items-center gap-2.5 px-4 py-3 rounded-xl bg-emerald-500/8 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 text-xs">
+      <div className="flex items-center gap-2.5 px-4 py-3 rounded-lg bg-emerald-500/8 text-emerald-600 dark:text-emerald-400 border border-emerald-500/15 text-xs">
         <RiCheckboxCircleLine className="size-4 shrink-0" />
         <span className="flex-1">
           {label && (
-            <span className="text-muted-foreground mr-2 font-mono">
+            <span className="text-muted-foreground mr-2 font-mono text-[10px]">
               {label}
             </span>
           )}
           Query OK — <strong>{result.rows_affected.toLocaleString()}</strong>{" "}
           row{result.rows_affected !== 1 ? "s" : ""} affected
         </span>
-        <span className="flex items-center gap-1 text-muted-foreground tabular-nums">
+        <span className="flex items-center gap-1 text-muted-foreground tabular-nums text-[10px]">
           <RiTimeLine className="size-3" />
           {result.query_time_ms}ms
         </span>
@@ -103,25 +104,25 @@ function ResultTable({
   }
 
   return (
-    <div className="flex flex-col border border-border rounded-xl overflow-hidden">
+    <div className="flex flex-col border border-border/60 rounded-lg overflow-hidden">
       {/* Result header */}
-      <div className="flex items-center gap-3 px-3 py-2 bg-muted/30 border-b border-border text-xs">
+      <div className="flex items-center gap-2 px-3 py-1.5 bg-muted/20 border-b border-border/40 text-[11px]">
         {label && (
           <>
-            <span className="font-mono text-muted-foreground/60 text-[11px]">
+            <span className="font-mono text-muted-foreground/50 text-[10px]">
               {label}
             </span>
-            <Separator orientation="vertical" className="h-3.5" />
+            <Separator orientation="vertical" className="h-3" />
           </>
         )}
         <Badge
           variant="secondary"
-          className="h-5 text-[10px] px-1.5 font-mono gap-1"
+          className="h-4 text-[9px] px-1 font-mono"
         >
-          {result.rows.length.toLocaleString()} rows
+          {result.rows.length} rows
         </Badge>
-        <span className="flex items-center gap-1 text-muted-foreground tabular-nums">
-          <RiTimeLine className="size-3" />
+        <span className="flex items-center gap-1 text-muted-foreground tabular-nums text-[10px]">
+          <RiTimeLine className="size-2.5" />
           {result.query_time_ms}ms
         </span>
         <div className="ml-auto">
@@ -130,29 +131,23 @@ function ResultTable({
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-6 px-2 text-[11px] gap-1 text-muted-foreground hover:text-foreground"
+                className="h-5 px-1.5 text-[10px] gap-1 text-muted-foreground hover:text-foreground"
               >
-                <RiDownloadLine className="size-3" />
+                <RiDownloadLine className="size-2.5" />
                 Export
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="text-xs w-40">
+            <DropdownMenuContent align="end" className="text-xs w-36">
               <DropdownMenuItem
                 onClick={() =>
-                  copyToClipboard(
-                    toCSV(result.columns, result.rows),
-                    "Copied as CSV"
-                  )
+                  copyToClipboard(toCSV(result.columns, result.rows), "CSV")
                 }
               >
                 Copy as CSV
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() =>
-                  copyToClipboard(
-                    toJSON(result.columns, result.rows),
-                    "Copied as JSON"
-                  )
+                  copyToClipboard(toJSON(result.columns, result.rows), "JSON")
                 }
               >
                 Copy as JSON
@@ -166,14 +161,14 @@ function ResultTable({
         <ScrollArea className="max-h-64">
           <table className="w-full text-xs border-collapse">
             <thead className="sticky top-0 z-10">
-              <tr className="border-b border-border bg-card">
-                <th className="w-9 px-2 py-2 text-right text-[10px] font-normal text-muted-foreground/30 border-r border-border/40 select-none">
+              <tr className="bg-card border-b border-border/40">
+                <th className="w-8 px-2 py-1.5 text-right text-[9px] font-normal text-muted-foreground/25 border-r border-border/15 select-none">
                   #
                 </th>
                 {result.columns.map((col) => (
                   <th
                     key={col}
-                    className="px-3 py-2 text-left text-[11px] font-semibold text-muted-foreground whitespace-nowrap border-r border-border/30 last:border-r-0 min-w-20"
+                    className="px-2.5 py-1.5 text-left text-[10px] font-semibold text-muted-foreground whitespace-nowrap border-r border-border/15 last:border-r-0 min-w-16"
                   >
                     {col}
                   </th>
@@ -184,9 +179,9 @@ function ResultTable({
               {result.rows.map((row, ri) => (
                 <tr
                   key={ri}
-                  className="border-b border-border/30 hover:bg-accent/30 transition-colors"
+                  className="border-b border-border/10 hover:bg-accent/15 transition-colors"
                 >
-                  <td className="px-2 py-1.5 text-right font-mono text-[10px] text-muted-foreground/25 border-r border-border/20 select-none tabular-nums">
+                  <td className="px-2 py-1 text-right font-mono text-[9px] text-muted-foreground/20 border-r border-border/10 select-none tabular-nums">
                     {ri + 1}
                   </td>
                   {row.map((cell, ci) => (
@@ -196,10 +191,10 @@ function ResultTable({
                       onClick={() =>
                         cell !== "NULL" && copyToClipboard(cell, "Copied")
                       }
-                      className="px-3 py-1.5 font-mono text-[11px] border-r border-border/15 last:border-r-0 max-w-60 overflow-hidden text-ellipsis whitespace-nowrap cursor-pointer hover:bg-primary/5 transition-colors"
+                      className="px-2.5 py-1 font-mono text-[10px] border-r border-border/10 last:border-r-0 max-w-56 overflow-hidden text-ellipsis whitespace-nowrap cursor-pointer hover:bg-primary/5 transition-colors"
                     >
                       {cell === "NULL" ? (
-                        <span className="text-muted-foreground/25 italic">
+                        <span className="text-muted-foreground/20 italic text-[9px]">
                           NULL
                         </span>
                       ) : (
@@ -214,7 +209,7 @@ function ResultTable({
           <ScrollBar orientation="horizontal" />
         </ScrollArea>
       ) : (
-        <p className="py-8 text-center text-xs text-muted-foreground/40">
+        <p className="py-6 text-center text-[11px] text-muted-foreground/30">
           No rows returned
         </p>
       )}
@@ -222,7 +217,7 @@ function ResultTable({
   );
 }
 
-// ── Main ──────────────────────────────────────────────────────────────────────
+// Main
 interface Props {
   db: string;
   databases: string[];
@@ -233,6 +228,12 @@ export default function SqlEditor({ db, databases }: Props) {
   const [sql, setSql] = useState("SELECT * FROM ");
   const [running, setRunning] = useState(false);
   const [results, setResults] = useState<StatementResult[]>([]);
+  const [editorHeight, setEditorHeight] = useState(180);
+  const { theme } = useTheme();
+
+  const dragging = useRef(false);
+  const startY = useRef(0);
+  const startH = useRef(0);
 
   const runAll = useCallback(async () => {
     const stmts = splitStatements(sql);
@@ -258,19 +259,40 @@ export default function SqlEditor({ db, databases }: Props) {
 
   const stmtCount = splitStatements(sql).length;
 
+  // Vertical resize for editor
+  const onResizePointerDown = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
+      e.preventDefault();
+      dragging.current = true;
+      startY.current = e.clientY;
+      startH.current = editorHeight;
+      (e.target as HTMLDivElement).setPointerCapture(e.pointerId);
+    },
+    [editorHeight]
+  );
+
+  const onResizePointerMove = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
+      if (!dragging.current) return;
+      const delta = e.clientY - startY.current;
+      setEditorHeight(Math.max(80, Math.min(500, startH.current + delta)));
+    },
+    []
+  );
+
+  const onResizePointerUp = useCallback(() => {
+    dragging.current = false;
+  }, []);
+
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      {/* ── Editor toolbar ── */}
-      <div className="shrink-0 flex items-center gap-2 px-3 h-10 border-b border-border bg-card/50">
-        <RiCodeLine className="size-3.5 text-amber-500 shrink-0" />
-        <span className="text-xs font-medium text-foreground/70">
-          SQL Editor
-        </span>
-        <Separator orientation="vertical" className="h-4 mx-0.5" />
+      {/* Toolbar */}
+      <div className="shrink-0 flex items-center gap-3 px-4 h-10 border-b border-border">
+        <RiCodeLine className="size-4 text-muted-foreground/40 shrink-0" />
 
         {/* DB selector */}
         <Select value={selectedDb} onValueChange={setSelectedDb}>
-          <SelectTrigger className="h-7 w-44 text-xs border-border/60 bg-background/60 font-mono">
+          <SelectTrigger className="h-7 w-40 text-xs border-border bg-transparent font-mono">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -287,66 +309,68 @@ export default function SqlEditor({ db, databases }: Props) {
         {stmtCount > 1 && (
           <Badge
             variant="secondary"
-            className="h-5 text-[10px] px-1.5 font-mono"
+            className="h-4 text-[9px] px-1 font-mono"
           >
             {stmtCount} stmts
           </Badge>
         )}
 
-        <span className="text-[10px] text-muted-foreground/40 select-none hidden sm:block">
-          Ctrl+Enter
-        </span>
+        <KbdGroup className="hidden sm:inline-flex">
+          <Kbd>Ctrl</Kbd>
+          <Kbd>Enter</Kbd>
+        </KbdGroup>
 
         <Button
           size="sm"
-          className="h-7 px-3 text-xs gap-1.5 font-medium"
+          className="h-7 px-3.5 text-xs gap-1.5 font-medium"
           onClick={runAll}
           disabled={running || !sql.trim()}
         >
           {running ? (
-            <RiLoader4Fill className="size-3.5 animate-spin" />
+            <RiLoader4Fill className="size-3 animate-spin" />
           ) : (
-            <RiPlayFill className="size-3.5" />
+            <RiPlayFill className="size-3" />
           )}
-          {running ? "Running…" : "Run"}
+          {running ? "Running..." : "Run"}
         </Button>
       </div>
 
-      {/* ── Editor ── */}
+      {/* Editor */}
       <div
-        className="shrink-0 relative border-b border-border"
-        style={{ height: 160 }}
+        className="shrink-0 border-b border-border bg-background"
+        style={{ height: editorHeight }}
       >
-        <Textarea
+        <CodeEditor
           value={sql}
-          onChange={(e) => setSql(e.target.value)}
-          onKeyDown={(e) => {
-            if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
-              e.preventDefault();
-              runAll();
-            }
-          }}
-          spellCheck={false}
-          placeholder={
-            "SELECT * FROM table_name LIMIT 100;\n\n-- Separate multiple statements with semicolons"
-          }
-          className="absolute inset-0 w-full h-full resize-none rounded-none border-0 font-mono text-xs leading-relaxed p-3.5 bg-background focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-muted-foreground/30"
+          onChange={setSql}
+          onRun={runAll}
+          isDark={theme === "dark"}
+          placeholder="SELECT * FROM table_name LIMIT 100;\n\n-- Separate multiple statements with semicolons"
         />
-        {/* Line number gutter hint */}
-        <div className="absolute left-0 top-0 bottom-0 w-8 border-r border-border/40 bg-muted/20 pointer-events-none" />
       </div>
 
-      {/* ── Results ── */}
+      {/* Vertical resize handle */}
+      <div
+        className="shrink-0 h-1 cursor-row-resize hover:bg-primary/20 active:bg-primary/40 transition-colors group flex items-center justify-center"
+        onPointerDown={onResizePointerDown}
+        onPointerMove={onResizePointerMove}
+        onPointerUp={onResizePointerUp}
+      >
+        <div className="w-8 h-[2px] rounded-full bg-border group-hover:bg-primary/30 transition-colors" />
+      </div>
+
+      {/* Results */}
       <ScrollArea className="flex-1">
-        <div className="p-4 space-y-3">
+        <div className="p-3 space-y-2">
           {!results.length && !running && (
             <div className="flex flex-col items-center justify-center py-12 gap-2 text-center">
-              <RiCodeLine className="size-8 text-muted-foreground/15" />
-              <p className="text-xs text-muted-foreground/40">
-                Write a query above and press{" "}
-                <kbd className="text-[10px] px-1 py-px rounded bg-muted font-mono">
-                  Ctrl+Enter
-                </kbd>
+              <RiCodeLine className="size-8 text-muted-foreground/10" />
+              <p className="text-[11px] text-muted-foreground/30 flex items-center gap-1.5 justify-center">
+                Write a query and press{" "}
+                <KbdGroup>
+                  <Kbd>Ctrl</Kbd>
+                  <Kbd>Enter</Kbd>
+                </KbdGroup>
               </p>
             </div>
           )}
@@ -354,20 +378,20 @@ export default function SqlEditor({ db, databases }: Props) {
           {running && (
             <div className="flex items-center justify-center gap-2 py-8 text-xs text-muted-foreground">
               <RiLoader4Fill className="size-4 animate-spin text-primary" />
-              Executing…
+              Executing...
             </div>
           )}
 
           {results.map((sr) => (
             <div key={sr.index}>
               {results.length > 1 && (
-                <p className="text-[10px] text-muted-foreground/40 font-mono mb-1.5 px-0.5 truncate">
+                <p className="text-[10px] text-muted-foreground/30 font-mono mb-1 px-0.5 truncate">
                   [{sr.index + 1}] {sr.sql.slice(0, 80)}
-                  {sr.sql.length > 80 ? "…" : ""}
+                  {sr.sql.length > 80 ? "..." : ""}
                 </p>
               )}
               {sr.error ? (
-                <div className="flex items-start gap-2.5 px-3.5 py-3 rounded-xl text-xs bg-destructive/8 text-destructive border border-destructive/20">
+                <div className="flex items-start gap-2 px-3 py-2.5 rounded-lg text-[11px] bg-destructive/8 text-destructive border border-destructive/20">
                   <RiAlertLine className="size-3.5 shrink-0 mt-px" />
                   <span className="font-mono leading-relaxed break-all">
                     {sr.error}
@@ -377,7 +401,7 @@ export default function SqlEditor({ db, databases }: Props) {
                 <ResultTable
                   result={sr.result}
                   label={
-                    results.length > 1 ? `Statement ${sr.index + 1}` : undefined
+                    results.length > 1 ? `Stmt ${sr.index + 1}` : undefined
                   }
                 />
               ) : null}

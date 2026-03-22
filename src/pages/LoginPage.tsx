@@ -12,14 +12,12 @@ import {
   RiLoader4Fill,
   RiMoonLine,
   RiSaveLine,
-  RiShieldCheckLine,
   RiSunLine,
 } from "@remixicon/react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
 import type { ConnectionInfo, ConnectionProfile } from "@/types";
 import type { Theme } from "@/hooks/useTheme";
 
@@ -107,26 +105,16 @@ export default function LoginPage({ onConnect, theme, toggleTheme }: Props) {
   }, []);
 
   return (
-    <main className="h-screen bg-background flex items-center justify-center relative overflow-hidden select-none">
-      {/* Background grid pattern */}
-      <div
-        className="absolute inset-0 pointer-events-none"
-        style={{
-          backgroundImage: `
-            linear-gradient(var(--border) 1px, transparent 1px),
-            linear-gradient(90deg, var(--border) 1px, transparent 1px)
-          `,
-          backgroundSize: "40px 40px",
-          opacity: 0.4,
-        }}
-      />
-      {/* Radial vignette */}
-      <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(ellipse_70%_70%_at_50%_50%,transparent_40%,var(--background)_100%)]" />
+    <main className="h-screen bg-background flex items-center justify-center relative overflow-hidden select-none noise-bg">
+      {/* Subtle ambient glow — neutral */}
+      <div className="absolute inset-0 pointer-events-none z-[1]">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_50%_35%_at_50%_-5%,rgba(255,255,255,0.04),transparent)]" />
+      </div>
 
-      {/* Theme toggle — top right */}
+      {/* Theme toggle */}
       <button
         onClick={toggleTheme}
-        className="absolute top-4 right-4 z-10 p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+        className="absolute top-4 right-4 z-10 p-2 rounded-lg text-muted-foreground/40 hover:text-foreground hover:bg-accent transition-colors"
         title={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
       >
         {theme === "dark" ? (
@@ -140,24 +128,24 @@ export default function LoginPage({ onConnect, theme, toggleTheme }: Props) {
       <div className="relative z-10 w-full max-w-sm mx-4">
         {/* Brand */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center size-12 rounded-2xl bg-primary text-primary-foreground shadow-lg mb-4">
-            <RiDatabase2Line className="size-6" />
+          <div className="inline-flex items-center justify-center size-12 rounded-xl bg-foreground text-background mb-3">
+            <RiDatabase2Line className="size-5" />
           </div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">
+          <h1 className="text-xl font-bold tracking-tight text-foreground">
             AeroBase
           </h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Modern MySQL client
+          <p className="text-[11px] text-muted-foreground/50 mt-0.5">
+            Modern MySQL Client
           </p>
         </div>
 
         {/* Saved profiles */}
         {profiles.length > 0 && (
-          <div className="mb-6">
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground/60 mb-2 px-0.5">
+          <div className="mb-5">
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/30 mb-2 px-0.5">
               Saved connections
             </p>
-            <div className="space-y-1.5">
+            <div className="space-y-1">
               {profiles.map((p) => (
                 <button
                   key={p.id}
@@ -168,52 +156,40 @@ export default function LoginPage({ onConnect, theme, toggleTheme }: Props) {
                     setPass("");
                     setError("");
                   }}
-                  className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl border border-border bg-card hover:bg-accent hover:border-primary/30 transition-all text-left group"
+                  className="w-full flex items-center gap-3 px-3 py-2 rounded-lg border border-border/50 bg-card/50 hover:bg-accent hover:border-primary/20 transition-all text-left group"
                 >
-                  <RiFlashlightLine className="size-4 text-primary/60 shrink-0" />
+                  <RiFlashlightLine className="size-3.5 text-primary/40 shrink-0 group-hover:text-primary transition-colors" />
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs font-medium text-foreground truncate">
-                      {p.name}
-                    </p>
-                    <p className="text-[11px] text-muted-foreground font-mono">
+                    <p className="text-[11px] font-mono text-foreground/80 truncate">
                       {p.user}@{p.host}:{p.port}
                     </p>
                   </div>
                   <button
                     onClick={(e) => deleteProfile(p.id, e)}
-                    className="opacity-0 group-hover:opacity-100 p-1 rounded-md hover:bg-destructive/15 hover:text-destructive text-muted-foreground/40 transition-all"
+                    className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-destructive/15 hover:text-destructive text-muted-foreground/30 transition-all"
                   >
-                    <RiCloseLine className="size-3.5" />
+                    <RiCloseLine className="size-3" />
                   </button>
                 </button>
               ))}
             </div>
-            <div className="flex items-center gap-3 my-5">
-              <Separator className="flex-1" />
-              <span className="text-[11px] text-muted-foreground/50 font-medium">
+            <div className="flex items-center gap-3 my-4">
+              <div className="flex-1 h-px bg-border/50" />
+              <span className="text-[10px] text-muted-foreground/30 font-medium">
                 or connect manually
               </span>
-              <Separator className="flex-1" />
+              <div className="flex-1 h-px bg-border/50" />
             </div>
           </div>
         )}
 
         {/* Login form */}
-        <div className="bg-card border border-border rounded-2xl shadow-sm overflow-hidden">
-          <div className="px-5 pt-5 pb-1">
-            <h2 className="text-sm font-semibold text-foreground">
-              New Connection
-            </h2>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Enter your MySQL server credentials
-            </p>
-          </div>
-
-          <form onSubmit={handleConnect} className="px-5 pb-5 pt-4 space-y-4">
+        <div className="bg-card/80 backdrop-blur-sm border border-border/50 rounded-xl overflow-hidden">
+          <form onSubmit={handleConnect} className="px-5 py-5 space-y-3.5">
             {/* Host + Port */}
-            <div className="grid grid-cols-4 gap-3">
+            <div className="grid grid-cols-4 gap-2.5">
               <div className="col-span-3 space-y-1.5">
-                <Label htmlFor="host" className="text-xs font-medium">
+                <Label htmlFor="host" className="text-[11px] font-medium text-muted-foreground">
                   Host
                 </Label>
                 <Input
@@ -221,14 +197,14 @@ export default function LoginPage({ onConnect, theme, toggleTheme }: Props) {
                   placeholder="localhost"
                   value={host}
                   onChange={(e) => setHost(e.target.value)}
-                  className="h-9 font-mono text-sm"
+                  className="h-9 text-sm"
                   required
                   autoComplete="off"
                   spellCheck={false}
                 />
               </div>
               <div className="col-span-1 space-y-1.5">
-                <Label htmlFor="port" className="text-xs font-medium">
+                <Label htmlFor="port" className="text-[11px] font-medium text-muted-foreground">
                   Port
                 </Label>
                 <Input
@@ -238,7 +214,7 @@ export default function LoginPage({ onConnect, theme, toggleTheme }: Props) {
                   max={65535}
                   value={port}
                   onChange={(e) => setPort(e.target.value)}
-                  className="h-9 font-mono text-sm"
+                  className="h-8 text-[12px] font-mono"
                   required
                 />
               </div>
@@ -246,7 +222,7 @@ export default function LoginPage({ onConnect, theme, toggleTheme }: Props) {
 
             {/* Username */}
             <div className="space-y-1.5">
-              <Label htmlFor="user" className="text-xs font-medium">
+              <Label htmlFor="user" className="text-[11px] font-medium text-muted-foreground">
                 Username
               </Label>
               <Input
@@ -254,7 +230,7 @@ export default function LoginPage({ onConnect, theme, toggleTheme }: Props) {
                 placeholder="root"
                 value={user}
                 onChange={(e) => setUser(e.target.value)}
-                className="h-9 font-mono text-sm"
+                className="h-9 text-sm"
                 required
                 autoComplete="username"
                 spellCheck={false}
@@ -263,7 +239,7 @@ export default function LoginPage({ onConnect, theme, toggleTheme }: Props) {
 
             {/* Password */}
             <div className="space-y-1.5">
-              <Label htmlFor="pass" className="text-xs font-medium">
+              <Label htmlFor="pass" className="text-[11px] font-medium text-muted-foreground">
                 Password
               </Label>
               <div className="relative">
@@ -273,19 +249,19 @@ export default function LoginPage({ onConnect, theme, toggleTheme }: Props) {
                   placeholder="Leave empty if none"
                   value={pass}
                   onChange={(e) => setPass(e.target.value)}
-                  className="h-9 font-mono text-sm pr-9"
+                  className="h-9 text-sm pr-9"
                   autoComplete="current-password"
                 />
                 <button
                   type="button"
                   tabIndex={-1}
                   onClick={() => setShowPass((v) => !v)}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground/30 hover:text-muted-foreground transition-colors"
                 >
                   {showPass ? (
-                    <RiEyeOffLine className="size-4" />
+                    <RiEyeOffLine className="size-3.5" />
                   ) : (
-                    <RiEyeLine className="size-4" />
+                    <RiEyeLine className="size-3.5" />
                   )}
                 </button>
               </div>
@@ -293,13 +269,11 @@ export default function LoginPage({ onConnect, theme, toggleTheme }: Props) {
 
             {/* Error */}
             {error && (
-              <div className="flex items-start gap-2.5 px-3 py-2.5 rounded-lg bg-destructive/10 text-destructive border border-destructive/20 text-xs">
+              <div className="flex items-start gap-2 px-3 py-2 rounded-lg bg-destructive/8 text-destructive border border-destructive/15 text-[11px]">
                 <RiAlertLine className="size-3.5 shrink-0 mt-px" />
                 <span className="leading-relaxed">{error}</span>
               </div>
             )}
-
-            <Separator />
 
             {/* Actions */}
             <div className="flex items-center gap-2 pt-1">
@@ -311,24 +285,24 @@ export default function LoginPage({ onConnect, theme, toggleTheme }: Props) {
                 onClick={saveProfile}
                 title="Save connection (without password)"
               >
-                <RiSaveLine className="size-3.5" />
+                <RiSaveLine className="size-3" />
                 Save
               </Button>
 
               <Button
                 type="submit"
-                className="flex-1 h-9 gap-2 font-medium"
+                className="flex-1 h-9 gap-2 font-medium text-sm"
                 disabled={loading}
               >
                 {loading ? (
                   <>
-                    <RiLoader4Fill className="size-4 animate-spin" />
-                    Connecting…
+                    <RiLoader4Fill className="size-3.5 animate-spin" />
+                    Connecting...
                   </>
                 ) : (
                   <>
-                    <RiArrowRightLine className="size-4" />
                     Connect
+                    <RiArrowRightLine className="size-3.5" />
                   </>
                 )}
               </Button>
@@ -336,11 +310,10 @@ export default function LoginPage({ onConnect, theme, toggleTheme }: Props) {
           </form>
         </div>
 
-        {/* Security notice */}
-        <div className="flex items-center justify-center gap-1.5 mt-4 text-[11px] text-muted-foreground/50">
-          <RiShieldCheckLine className="size-3.5" />
-          Passwords are never saved to disk
-        </div>
+        {/* Version */}
+        <p className="text-center text-[10px] text-muted-foreground/20 mt-4">
+          v0.1.0
+        </p>
       </div>
     </main>
   );
