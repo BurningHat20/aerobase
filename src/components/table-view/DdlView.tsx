@@ -135,7 +135,7 @@ const KW = new Set([
 function tokenise(sql: string): React.ReactNode {
   // Split preserving delimiters: backtick-quoted, single-quoted, numbers, words, rest
   const tokens = sql.split(
-    /(` [^`]* `|'[^']*'|\b\d+\b|\b[A-Z_]+\b|[^`'\w]+)/gi
+    /(`[^`]*`|'[^']*'|\b\d+\b|\b[A-Z_]+\b|[^`'\w]+)/gi
   );
   return tokens.map((tok, i) => {
     if (!tok) return null;

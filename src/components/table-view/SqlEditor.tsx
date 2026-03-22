@@ -36,8 +36,20 @@ function splitStatements(sql: string): string[] {
   const stmts: string[] = [];
   let cur = "",
     inS = false,
-    inD = false;
+    inD = false,
+    esc = false;
   for (const ch of sql) {
+    if (esc) {
+      // Previous char was backslash — consume this char literally
+      cur += ch;
+      esc = false;
+      continue;
+    }
+    if (ch === "\\" && (inS || inD)) {
+      cur += ch;
+      esc = true;
+      continue;
+    }
     if (ch === "'" && !inD) {
       inS = !inS;
       cur += ch;

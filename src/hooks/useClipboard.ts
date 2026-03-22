@@ -52,9 +52,10 @@ export function toInsert(
   columns: string[],
   row: string[]
 ): string {
-  const cols = columns.map((c) => `\`${c.replace(/`/g, "``")}\``).join(", ");
+  const escId = (s: string) => `\`${s.replace(/`/g, "``")}\``;
+  const cols = columns.map(escId).join(", ");
   const vals = row
     .map((v) => (v === "NULL" ? "NULL" : `'${v.replace(/'/g, "\\'")}'`))
     .join(", ");
-  return `INSERT INTO \`${tableName}\` (${cols}) VALUES (${vals});`;
+  return `INSERT INTO ${escId(tableName)} (${cols}) VALUES (${vals});`;
 }
