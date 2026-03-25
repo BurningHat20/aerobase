@@ -75,7 +75,7 @@ AeroBase is a professional-grade MySQL desktop client developed with Tauri, Reac
 1. **Clone the repository**:
 
    ```bash
-   git clone https://github.com/your-username/aerobase.git
+   git clone https://github.com/BurningHat20/aerobase.git
    cd aerobase
    ```
 
